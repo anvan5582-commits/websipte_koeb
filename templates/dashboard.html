@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        
+        /* Плавні переходи для чеклиста */
+        .task-transition { transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 min-h-screen text-gray-800 dark:text-gray-100 p-4 md:p-8 transition-colors duration-300">
+
+    <div class="max-w-7xl mx-auto relative">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+                    <i class="fas fa-layer-group text-blue-500"></i> Dashboard
+                </h1>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Personal Control Center</p>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-white dark:bg-gray-700 shadow-sm border border-indigo-100 dark:border-gray-600 flex items-center justify-center text-gray-600 dark:text-yellow-400 hover:scale-110 transition-transform">
+                    <i class="fas fa-sun dark:hidden"></i>
+                    <i class="fas fa-moon hidden dark:block"></i>
+                </button>
+
+                <div class="bg-white dark:bg-gray-800 px-4 py-2 rounded-lg shadow-sm flex items-center gap-3 border border-indigo-100 dark:border-gray-700 transition-colors">
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Weekly Status</p>
+                        <p id="global-verdict" class="font-bold text-green-600 dark:text-green-400 transition-all">{{ verdict }}</p>
+                    </div>
+                    <div id="global-score" class="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-600 dark:text-green-300 font-bold transition-all">
+                        {{ score }}%
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <div class="lg:col-span-4 space-y-6">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 relative transition-colors border border-transparent dark:border-gray-700">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white">
+                            <i class="fas fa-check-circle text-indigo-500"></i> Tasks
+                        </h2>
+                        <button onclick="openTaskModal()" class="text-blue-500 hover:text-blue-400 bg-blue-50 dark:bg-gray-700 p-2 rounded-full transition">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex p-1 bg-gray-100 dark:bg-gray-700 rounded-lg mb-4 transition-colors">
+                        <button onclick="switchTaskTab('urgent')" id="tab-urgent" class="flex-1 py-1.5 px-2 rounded-md text-xs font-medium text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-all">Urgent</button>
+                        <button onclick="switchTaskTab('week')" id="tab-week" class="flex-1 py-1.5 px-2 rounded-md bg-white dark:bg-gray-600 shadow-sm text-xs font-medium text-gray-800 dark:text-white transition-all">This Week</button>
+                        <button onclick="switchTaskTab('classes')" id="tab-classes" class="flex-1 py-1.5 px-2 rounded-md text-xs font-medium text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-all">By Class</button>
+                    </div>
+
+                    <div class="h-[500px] overflow-y-auto pr-2 space-y-3">
+                        
+                        <div id="view-list" class="space-y-3">
+                            {% for task in tasks %}
+                            <div id="task-card-{{ task.id }}" 
+                                 class="task-item group flex items-start gap-3 p-3 rounded-lg border border-l-4 task-transition bg-white dark:bg-gray-700
+                                        {% if task.is_completed %} border-l-gray-300 dark:border-l-gray-600 opacity-60
+                                        {% elif task.timing == 'urgent' %} border-l-red-500
+                                        {% elif task.timing == 'this_week' %} border-l-orange-400
+                                        {% elif task.timing == 'next_week' %} border-l-blue-300
+                                        {% else %} border-l-gray-300 dark:border-l-gray-600 {% endif %}
+                                        border-gray-100 dark:border-gray-600 hover:shadow-md dark:hover:bg-gray-600"
+                                 data-timing="{{ task.timing }}">
+                                
+                                <input type="checkbox" onchange="toggleTask({{ task.id }}, this)" 
+                                       class="mt-1.5 w-4 h-4 rounded border-gray-300 dark:border-gray-500 text-blue-600 cursor-pointer bg-gray-50 dark:bg-gray-600"
+                                       autocomplete="off"
+                                       {% if task.is_completed %}checked{% endif %}>
+                                
+                                <div class="flex-1">
+                                    <p id="task-title-{{ task.id }}" class="font-medium task-transition {% if task.is_completed %}line-through text-gray-500 dark:text-gray-500{% else %}text-gray-800 dark:text-gray-200{% endif %}">
+                                        {{ task.title }}
+                                    </p>
+                                    <div class="flex justify-between items-center mt-1">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            {% if task.timing == 'urgent' %}
+                                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300 font-semibold">Urgent</span>
+                                            {% elif task.timing == 'this_week' %}
+                                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 font-medium">This Week</span>
+                                            {% elif task.timing == 'next_week' %}
+                                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 font-medium">Next Week</span>
+                                            {% endif %}
+                                            <span class="text-[10px] text-gray-400 dark:text-gray-500">{{ task.category }}</span>
+                                        </div>
+                                        
+                                        <div class="hidden group-hover:flex gap-2">
+                                            <button onclick="openTaskModal({{ task.id }}, '{{ task.title }}', '{{ task.category }}', '{{ task.timing }}')" class="text-gray-400 hover:text-blue-500"><i class="fas fa-pencil-alt text-xs"></i></button>
+                                            <button onclick="deleteTask({{ task.id }})" class="text-gray-400 hover:text-red-500"><i class="fas fa-trash text-xs"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div id="view-classes" class="hidden space-y-6">
+                            {% for cat in categories %}
+                            <div>
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 border-b dark:border-gray-700 pb-1">{{ cat }}</h3>
+                                <div class="space-y-2">
+                                    {% for task in tasks %}
+                                        {% if task.category == cat %}
+                                        <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-md border border-gray-100 dark:border-gray-600 group hover:bg-gray-100 dark:hover:bg-gray-600 transition">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-2 h-2 rounded-full 
+                                                    {% if task.is_completed %}bg-gray-300 dark:bg-gray-500
+                                                    {% elif task.timing == 'urgent' %}bg-red-500
+                                                    {% elif task.timing == 'this_week' %}bg-orange-400
+                                                    {% elif task.timing == 'next_week' %}bg-blue-300
+                                                    {% else %}bg-gray-300 dark:bg-gray-500{% endif %}"></div>
+                                                <span class="text-sm dark:text-gray-300 {% if task.is_completed %}line-through text-gray-400 dark:text-gray-500{% endif %}">{{ task.title }}</span>
+                                            </div>
+                                            <div class="hidden group-hover:flex gap-2">
+                                                <button onclick="openTaskModal({{ task.id }}, '{{ task.title }}', '{{ task.category }}', '{{ task.timing }}')" class="text-gray-400 hover:text-blue-500"><i class="fas fa-pencil-alt text-xs"></i></button>
+                                                <button onclick="deleteTask({{ task.id }})" class="text-gray-400 hover:text-red-500"><i class="fas fa-trash text-xs"></i></button>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 space-y-6">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transition-colors border border-transparent dark:border-gray-700">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white">
+                            <i class="fas fa-fire text-orange-500"></i> Habit Tracker
+                        </h2>
+                        <button onclick="openHabitModal()" class="text-sm bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition shadow-sm flex items-center gap-2">
+                            <i class="fas fa-plus"></i> Add Habit
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[600px]">
+                            <thead>
+                                <tr class="text-left text-sm text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                    <th class="pb-3 w-1/3 font-medium">Habit</th>
+                                    {% for day in week_dates %}
+                                    <th class="pb-3 text-center w-10 {% if day == today %}text-blue-500 font-bold{% endif %}">
+                                        {{ day.strftime('%a') }}
+                                    </th>
+                                    {% endfor %}
+                                    <th class="pb-3 text-center w-16">Stats</th>
+                                    <th class="pb-3 text-center w-10"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+                                {% for row in habits %}
+                                <tr class="group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                                    <td class="py-4">
+                                        <p class="font-semibold text-gray-800 dark:text-gray-200">{{ row.obj.name }}</p>
+                                        <p class="text-xs text-gray-400">{{ row.obj.description }}</p>
+                                    </td>
+                                    
+                                    {% for day_data in row.days %}
+                                    <td class="text-center">
+                                        <div id="btn-{{ row.obj.id }}-{{ day_data.date }}"
+                                             onclick="toggleHabit({{ row.obj.id }}, '{{ day_data.date }}')"
+                                             class="w-8 h-8 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-all duration-200 shadow-sm
+                                             {% if day_data.status == 'done' %} bg-green-500 text-white
+                                             {% elif day_data.status == 'today' %} border-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-500
+                                             {% else %} border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 {% endif %}">
+                                            {% if day_data.status == 'done' %}<i class="fas fa-check text-xs"></i>
+                                            {% elif day_data.status == 'today' %}<i class="fas fa-plus text-xs"></i>{% endif %}
+                                        </div>
+                                    </td>
+                                    {% endfor %}
+                                    
+                                    <td id="habit-progress-{{ row.obj.id }}" class="text-center font-bold {% if row.progress == 100 %}text-green-500{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                                        {{ row.progress }}%
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="hidden group-hover:flex items-center justify-center gap-2">
+                                            <button onclick="openHabitModal({{ row.obj.id }}, '{{ row.obj.name }}', '{{ row.obj.description }}')" class="text-gray-400 hover:text-blue-500"><i class="fas fa-pencil-alt text-xs"></i></button>
+                                            <button onclick="deleteHabit({{ row.obj.id }})" class="text-gray-400 hover:text-red-500"><i class="fas fa-trash text-xs"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="taskModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 border dark:border-gray-700">
+            <h3 id="taskModalTitle" class="text-xl font-bold mb-4 dark:text-white">Add Task</h3>
+            <input type="hidden" id="taskId">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+                    <input type="text" id="taskInputTitle" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Class / Category</label>
+                    <input type="text" id="taskInputCategory" placeholder="e.g. Work, Home" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timing / Urgency</label>
+                    <select id="taskInputTiming" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-700 dark:text-white">
+                        <option value="urgent">🔥 Urgent</option>
+                        <option value="this_week">📅 This Week</option>
+                        <option value="next_week">🔜 Next Week</option>
+                        <option value="later">💤 Not Urgent</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button onclick="closeTaskModal()" class="px-4 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
+                    <button onclick="saveTask()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="habitModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 border dark:border-gray-700">
+            <h3 id="habitModalTitle" class="text-xl font-bold mb-4 dark:text-white">Add Habit</h3>
+            <input type="hidden" id="habitId">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Habit Name</label>
+                    <input type="text" id="habitInputName" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                    <input type="text" id="habitInputDesc" placeholder="e.g. 30 mins daily" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-gray-700 dark:text-white">
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button onclick="closeHabitModal()" class="px-4 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
+                    <button onclick="saveHabit()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+
+        function switchTaskTab(tab) {
+            ['urgent', 'week', 'classes'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (t === tab) {
+                    btn.className = "flex-1 py-1.5 px-2 rounded-md bg-white dark:bg-gray-600 shadow-sm text-xs font-medium text-gray-800 dark:text-white transition-all";
+                } else {
+                    btn.className = "flex-1 py-1.5 px-2 rounded-md text-xs font-medium text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-all";
+                }
+            });
+
+            const listView = document.getElementById('view-list');
+            const classView = document.getElementById('view-classes');
+
+            if (tab === 'classes') {
+                listView.classList.add('hidden');
+                classView.classList.remove('hidden');
+            } else {
+                listView.classList.remove('hidden');
+                classView.classList.add('hidden');
+                
+                const items = listView.querySelectorAll('.task-item');
+                items.forEach(item => {
+                    const timing = item.dataset.timing;
+                    if (tab === 'urgent') {
+                        if (timing !== 'urgent') item.classList.add('hidden');
+                        else item.classList.remove('hidden');
+                    } else if (tab === 'week') {
+                        if (timing === 'urgent' || timing === 'this_week') item.classList.remove('hidden');
+                        else item.classList.add('hidden');
+                    }
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { switchTaskTab('week'); });
+
+        // --- TASK LOGIC (NO RELOAD) ---
+        
+        async function toggleTask(id, checkbox) {
+            // 1. Send request silently
+            fetch(`/api/toggle_task/${id}`, { method: 'POST' });
+
+            // 2. Update UI instantly
+            const card = document.getElementById(`task-card-${id}`);
+            const title = document.getElementById(`task-title-${id}`);
+            
+            const isCompleted = checkbox.checked;
+
+            if (isCompleted) {
+                // Dim the card
+                card.classList.add('opacity-60');
+                // Cross out text
+                title.classList.add('line-through', 'text-gray-500', 'dark:text-gray-500');
+                title.classList.remove('text-gray-800', 'dark:text-gray-200');
+                // Remove colored border (make it gray)
+                card.classList.remove('border-l-red-500', 'border-l-orange-400', 'border-l-blue-300');
+                card.classList.add('border-l-gray-300', 'dark:border-l-gray-600');
+            } else {
+                // Restore card
+                card.classList.remove('opacity-60');
+                // Restore text
+                title.classList.remove('line-through', 'text-gray-500', 'dark:text-gray-500');
+                title.classList.add('text-gray-800', 'dark:text-gray-200');
+                
+                // Restore original border color based on timing data
+                const timing = card.dataset.timing;
+                card.classList.remove('border-l-gray-300', 'dark:border-l-gray-600');
+                
+                if (timing === 'urgent') card.classList.add('border-l-red-500');
+                else if (timing === 'this_week') card.classList.add('border-l-orange-400');
+                else if (timing === 'next_week') card.classList.add('border-l-blue-300');
+                else card.classList.add('border-l-gray-300', 'dark:border-l-gray-600');
+            }
+        }
+
+        // --- HABIT LOGIC (NO RELOAD) ---
+
+        async function toggleHabit(habitId, dateStr) {
+            const btn = document.getElementById(`btn-${habitId}-${dateStr}`);
+            
+            // Animation press
+            btn.style.transform = "scale(0.9)";
+            setTimeout(() => btn.style.transform = "scale(1)", 150);
+
+            // Fetch
+            const response = await fetch('/api/toggle_habit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ habit_id: habitId, date: dateStr })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                // Update Button Style directly
+                updateHabitBtnStyle(btn, data.status);
+
+                // Update Progress Text for this habit
+                const progressText = document.getElementById(`habit-progress-${habitId}`);
+                if(progressText) {
+                    progressText.innerText = data.habit_progress + '%';
+                    if (data.habit_progress === 100) {
+                        progressText.className = "text-center font-bold text-green-500";
+                    } else {
+                        progressText.className = "text-center font-bold text-gray-700 dark:text-gray-300";
+                    }
+                }
+
+                // Update Global Stats
+                document.getElementById('global-score').innerText = data.new_score + '%';
+                document.getElementById('global-verdict').innerText = data.new_verdict;
+            }
+        }
+
+        function updateHabitBtnStyle(btn, status) {
+            // Reset base classes
+            btn.className = "w-8 h-8 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-all duration-200 shadow-sm";
+            btn.innerHTML = ""; // clear icon
+
+            if (status === 'done') {
+                btn.classList.add('bg-green-500', 'text-white');
+                btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
+            } else if (status === 'today') {
+                btn.classList.add('border-2', 'border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20', 'text-blue-500');
+                btn.innerHTML = '<i class="fas fa-plus text-xs"></i>';
+            } else {
+                // Missed or empty
+                btn.classList.add('border', 'border-gray-200', 'dark:border-gray-600', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
+            }
+        }
+
+
+        // --- CRUD (These still reload, which is fine for adding/deleting) ---
+
+        function openTaskModal(id = null, title = '', category = '', timing = 'later') {
+            document.getElementById('taskId').value = id || '';
+            document.getElementById('taskInputTitle').value = title;
+            document.getElementById('taskInputCategory').value = category;
+            document.getElementById('taskInputTiming').value = timing;
+            document.getElementById('taskModalTitle').innerText = id ? 'Edit Task' : 'Add Task';
+            document.getElementById('taskModal').classList.remove('hidden');
+        }
+
+        function closeTaskModal() { document.getElementById('taskModal').classList.add('hidden'); }
+
+        async function saveTask() {
+            const id = document.getElementById('taskId').value;
+            const title = document.getElementById('taskInputTitle').value;
+            const category = document.getElementById('taskInputCategory').value;
+            const timing = document.getElementById('taskInputTiming').value;
+            if (!title) return alert('Title is required');
+            const url = id ? `/api/tasks/${id}` : '/api/tasks';
+            const method = id ? 'PUT' : 'POST';
+            await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, category, timing }) });
+            location.reload();
+        }
+
+        async function deleteTask(id) {
+            if(confirm('Delete this task?')) { await fetch(`/api/tasks/${id}`, { method: 'DELETE' }); location.reload(); }
+        }
+
+        function openHabitModal(id = null, name = '', desc = '') {
+            document.getElementById('habitId').value = id || '';
+            document.getElementById('habitInputName').value = name;
+            document.getElementById('habitInputDesc').value = desc;
+            document.getElementById('habitModalTitle').innerText = id ? 'Edit Habit' : 'Add Habit';
+            document.getElementById('habitModal').classList.remove('hidden');
+        }
+
+        function closeHabitModal() { document.getElementById('habitModal').classList.add('hidden'); }
+
+        async function saveHabit() {
+            const id = document.getElementById('habitId').value;
+            const name = document.getElementById('habitInputName').value;
+            const description = document.getElementById('habitInputDesc').value;
+            if (!name) return alert('Name is required');
+            const url = id ? `/api/habits/${id}` : '/api/habits';
+            const method = id ? 'PUT' : 'POST';
+            await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description }) });
+            location.reload();
+        }
+
+        async function deleteHabit(id) {
+            if(confirm('Delete habit?')) { await fetch(`/api/habits/${id}`, { method: 'DELETE' }); location.reload(); }
+        }
+    </script>
+</body>
+</html>
