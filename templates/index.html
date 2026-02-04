@@ -1,70 +1,2133 @@
 <!DOCTYPE html>
-<html lang="uk">
-<head>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Трекер звичок</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
+    <link rel="preconnect" href="https://fonts.googleapis.com/">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
     <link href="/static/css2.css" rel="stylesheet">
+    <script src="/static/3.4.17"></script>
     <link href="/static/all.min.css" rel="stylesheet">
+    <script src="/static/index.min.js"></script>
+    <script src="/static/overlayscrollbars.browser.es6.min.js"></script>
     <link href="/static/overlayscrollbars.min.css" rel="stylesheet">
-
+    <script>
+        // Pre-load view preference to prevent flash
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedView = localStorage.getItem('no_sync_view');
+            if (savedView === 'compact') {
+                const habitsContainer = document.getElementById('habitsContainer');
+                const compactContainer = document.getElementById('compactViewContainer');
+                if (habitsContainer && compactContainer) {
+                    habitsContainer.style.display = 'none';
+                    compactContainer.style.display = 'block';
+                    compactContainer.classList.remove('hidden');
+                }
+            }
+        });
+    </script>
     <style>
-        /* Я залишив ваші анімації та стилі карток тут, 
-           щоб не роздувати папку static додатковими файлами */
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        .fade-in-up { animation: fadeInUp 0.6s ease-out; }
-        .habit-card { transition: all 0.3s ease; }
-        .habit-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         
-        /* GitHub Grid Styles */
-        .github-grid { font-family: sans-serif; position: relative; height: 135px; overflow-x: auto; }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); }
+            40%, 43% { transform: translate3d(0, -30px, 0); }
+            70% { transform: translate3d(0, -15px, 0); }
+            90% { transform: translate3d(0, -4px, 0); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        .pulse-animation {
+            animation: pulse 0.6s ease-in-out;
+        }
+        
+        .bounce-animation {
+            animation: bounce 1s ease-in-out;
+        }
+        
+        .shake-animation {
+            animation: shake 0.8s ease-in-out;
+        }
+        
+        .streak-0 { background: linear-gradient(135deg, #6b7280, #9ca3af); }
+        .streak-3 { background: linear-gradient(135deg, #ff6b6b, #ff8e8e); }
+        .streak-7 { background: linear-gradient(135deg, #4ecdc4, #44a08d); }
+        .streak-10 { background: linear-gradient(135deg, #45b7d1, #96c93d); }
+        .streak-20 { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .streak-30 { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .streak-50 { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .streak-100 { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+        
+        .habit-card {
+            transition: all 0.3s ease;
+        }
+        
+        .habit-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .checkmark {
+            transition: all 0.3s ease;
+        }
+        
+        .checkmark:hover {
+            transform: scale(1.1);
+        }
+        
+        .modal {
+            backdrop-filter: blur(5px);
+        }
+
+        /* GitHub-style contribution grid */
+        .github-grid {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .contribution-day {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            border: 1px solid rgba(27, 31, 35, 0.06);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: 600;
+            color: rgba(27, 31, 35, 0.6);
+        }
+
+        /* Hide day numbers on desktop */
+        .contribution-day {
+            color: transparent;
+        }
+
+        /* Mobile styles for contribution squares */
+        @media (max-width: 768px) {
+            .contribution-day {
+                width: 20px;
+                height: 20px;
+                font-size: 10px;
+                color: rgba(255, 255, 255, 0.9);
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+                font-weight: 700;
+            }
+            
+            .github-grid {
+                height: 190px!important; /* Increase height for mobile */
+            }
+        }
+        
+        .contribution-day:hover {
+            border: 1px solid rgba(27, 31, 35, 0.3);
+            transform: scale(1.1);
+        }
+        
+        /* Activity levels */
         .activity-0 { background-color: #ebedf0; }
         .activity-1 { background-color: #9be9a8; }
         .activity-2 { background-color: #40c463; }
         .activity-3 { background-color: #30a14e; }
         .activity-4 { background-color: #216e39; }
+        .activity-note { background-color: #f59e0b; } /* Orange for notes without completion */
         
-        /* Dark Mode */
-        .dark body { background: #111827; color: white; }
-        .dark .bg-white { background-color: #374151 !important; }
+        .month-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #656d76;
+            fill: #656d76;
+        }
+
+        /* Mobile styles for month labels */
+        @media (max-width: 768px) {
+            .month-label {
+                font-size: 10px;
+                font-weight: 600;
+            }
+        }
+        
+        .day-label {
+            font-size: 11px;
+            color: #656d76;
+            fill: #656d76;
+        }
+        
+        .contribution-tooltip {
+            position: absolute;
+            background: #24292f;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            white-space: nowrap;
+            box-shadow: 0 8px 24px rgba(149, 157, 165, 0.2);
+        }
+        
+        .contribution-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #24292f transparent transparent transparent;
+        }
+        
+
+        
+        .contribution-day.has-note::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 4px;
+            height: 4px;
+            background: #1f6feb;
+            border-radius: 50%;
+            border: 1px solid white;
+        }
+        
+        .contribution-day {
+            position: relative;
+        }
+        
+        .github-grid {
+            width: 100%;
+            min-width: 0;
+            position: relative;
+            height: 135px; /* Fixed height to contain the grid */
+        }
+        
+        .grid-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: max-content;
+        }
+
+        /* Sticky weekday column so labels stay visible during horizontal scroll */
+        .day-label-column {
+            position: sticky;
+            left: 0;
+            background: #ffffff; /* match card background */
+            z-index: 2;
+            gap: 4px; /* desktop gap */
+            width: 30px;
+            height: 100%;
+            justify-content: center;
+            padding-top: 20px;
+            padding-right: 5px;
+        }
+
+        .dark .day-label-column {
+            background: #374151; /* dark card bg */
+        }
+
+        /* Mobile gap for day labels */
+        @media (max-width: 768px) {
+            .day-label {
+                height: 20px !important;
+                line-height: 20px !important;
+            }
+        }
+
+        /* Desktop day label height */
+        .day-label {
+            height: 12px;
+            line-height: 12px;
+        }
+        
+        /* Ensure long habit names wrap nicely */
+        .habit-card h3,
+        .habit-card .habit-title {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
+        
+        /* Inline editing styles */
+        .habit-title {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            padding: 2px 4px;
+            border-radius: 4px;
+            max-width: 300px; /* Prevent title from taking too much space */
+        }
+        
+        .habit-title:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        
+        .habit-title-input {
+            border: 2px solid #3b82f6;
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            background: white;
+            outline: none;
+            max-width: 300px;
+            min-width: 150px;
+        }
+
+        /* Dark mode styles - only applied when .dark class is present */
+        .dark {
+            color-scheme: dark;
+        }
+
+        .dark body {
+            background: linear-gradient(135deg, #1f2937, #111827);
+            color: #f9fafb;
+        }
+
+        .dark .bg-white {
+            background-color: #374151 !important;
+        }
+
+        .dark .text-gray-800 {
+            color: #f9fafb !important;
+        }
+
+        .dark .text-gray-600 {
+            color: #d1d5db !important;
+        }
+
+        .dark .border-gray-300 {
+            border-color: #4b5563 !important;
+        }
+
+        .dark .bg-gray-300 {
+            background-color: #4b5563 !important;
+        }
+
+        .dark .text-gray-700 {
+            color: #d1d5db !important;
+        }
+
+        .dark .hover\:bg-gray-400:hover {
+            background-color: #6b7280 !important;
+        }
+
+        .dark input, .dark textarea {
+            background-color: #4b5563 !important;
+            color: #f9fafb !important;
+        }
+
+        .dark .habit-title:hover {
+            background-color: rgba(59, 130, 246, 0.2);
+        }
+
+        .dark .habit-title-input {
+            background-color: #4b5563;
+            color: #f9fafb;
+        }
+
+        /* Dark mode GitHub grid */
+        .dark .activity-0 { background-color: #161b22; }
+        .dark .activity-1 { background-color: #4ade80; }
+        .dark .activity-2 { background-color: #22c55e; }
+        .dark .activity-3 { background-color: #16a34a; }
+        .dark .activity-4 { background-color: #15803d; }
+        .dark .activity-note { background-color: #f59e0b; }
+
+        .dark .contribution-day {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .dark .contribution-day:hover {
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .dark .month-label,
+        .dark .day-label {
+            color: #8b949e;
+        }
+
+        /* Mobile dark mode month labels */
+        @media (max-width: 768px) {
+            .dark .month-label {
+                color: #8b949e;
+            }
+        }
+
+
+
+        .dark .contribution-tooltip {
+            background: #f6f8fa;
+            color: #24292f;
+        }
+
+        .dark .contribution-tooltip::after {
+            border-color: #f6f8fa transparent transparent transparent;
+        }
+
+        .dark .contribution-day.has-note::after {
+            background: #58a6ff;
+            border: 1px solid #0d1117;
+        }
+
+        .dark .contribution-day {
+            color: transparent;
+        }
+
+        /* Mobile dark mode styles */
+        @media (max-width: 768px) {
+            .dark .contribution-day {
+                color: rgba(255, 255, 255, 0.9);
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+                font-weight: 700;
+            }
+        }
+
+        /* Dark mode current day border override */
+        .dark .contribution-day[style*="border: 1px solid #1f2937"] {
+            border: 1px solid #f3f4f6 !important;
+        }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            background: #e5e7eb;
+            border: none;
+            border-radius: 20px;
+            width: 40px;
+            height: 20px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .dark .theme-toggle {
+            background: #4b5563;
+        }
+
+        .theme-toggle-slider {
+            background: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+        }
+
+        .dark .theme-toggle-slider {
+            transform: translateX(20px);
+            background: #1f2937;
+        }
+
+        .theme-toggle-slider i {
+            color: #fbbf24;
+        }
+
+        .dark .theme-toggle-slider i {
+            color: #fbbf24;
+        }
+
+        /* Dark mode streak colors */
+        .dark .streak-0 { background: linear-gradient(135deg, #4b5563, #6b7280); }
+
+        /* Compact view styles */
+        .compact-wrapper {
+            display: flex;
+            overflow: hidden;
+        }
+
+        .compact-names-column {
+            flex-shrink: 0;
+            border-right: 1px solid #e5e7eb;
+            min-width: 100px;
+            max-width: 250px;
+        }
+
+        .compact-grid-column {
+            flex: 1;
+            overflow-x: auto;
+        }
+
+        .compact-names-header {
+            font-weight: 600;
+            color: #374151;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            background-color: transparent;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .compact-habit-name {
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            word-wrap: break-word;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            height: 48px;
+            display: flex;
+            align-items: center;
+        }
+
+        .compact-grid-header {
+            display: flex;
+        }
+
+        .compact-day-header {
+            font-size: 10px;
+            color: #6b7280;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            height: 60px;
+            display: flex;
+            border-top: 1px solid #e5e7eb;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 8px;
+            white-space: nowrap;
+            min-width: 32px;
+            font-weight: 600;
+        }
+
+        .compact-grid-row {
+            display: flex;
+        }
+
+        .compact-grid-cell {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+            border: 1px solid rgba(27, 31, 35, 0.06);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .compact-grid-cell:hover {
+            border: 1px solid rgba(27, 31, 35, 0.3);
+            transform: scale(1.2);
+        }
+
+        .compact-grid-cell.has-note::after {
+            content: '';
+            position: absolute;
+            top: -1px;
+            right: -1px;
+            width: 3px;
+            height: 3px;
+            background: #1f6feb;
+            border-radius: 50%;
+            border: 1px solid white;
+        }
+
+        .compact-grid-cell-wrapper {
+            height: 48px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            padding: 0 8px;
+        }
+
+        /* Dark mode compact view */
+        .dark .compact-names-column {
+            border-right-color: #4b5563;
+        }
+
+        .dark .compact-names-header {
+            color: #f9fafb;
+            border-bottom-color: #4b5563;
+        }
+
+        .dark .compact-habit-name {
+            color: #f9fafb;
+            border-bottom-color: #4b5563;
+        }
+
+        .dark .compact-grid-header {
+            border-bottom-color: #4b5563;
+        }
+
+        .dark .compact-day-header {
+            color: #9ca3af;
+            border-top: 1px solid #4b5563;
+        }
+
+        .dark .compact-grid-cell-wrapper {
+            border-bottom-color: #4b5563;
+        }
+
+        .dark .compact-grid-cell {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .dark .compact-grid-cell:hover {
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .dark .compact-grid-cell.has-note::after {
+            background: #58a6ff;
+            border: 1px solid #0d1117;
+        }
+
+        /* Dark mode view toggle */
+        .dark .bg-gray-100 {
+            background-color: #4b5563 !important;
+        }
+
+        .dark .text-gray-700 {
+            color: #e5e7eb !important;
+        }
+
+        .dark .border-gray-300 {
+            border-color: #6b7280 !important;
+        }
+
+        .dark .hover\:bg-gray-200:hover {
+            background-color: #6b7280 !important;
+        }
+
+        .dark .text-gray-600 {
+            color: #d1d5db !important;
+        }
+
+        /* Drag and drop styles */
+        .compact-habit-name {
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .compact-habit-name:active {
+            cursor: grabbing;
+        }
+
+        .drag-handle {
+            color: #9ca3af;
+            font-size: 12px;
+            cursor: grab;
+            transition: color 0.2s ease;
+        }
+
+        .compact-habit-name:hover .drag-handle {
+            color: #6b7280;
+        }
+
+        .compact-habit-name:active .drag-handle {
+            cursor: grabbing;
+        }
+
+        .habit-name-text {
+            flex: 1;
+            word-wrap: break-word;
+        }
+
+        .compact-habit-name.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+
+        .compact-habit-name.drag-over {
+            border-top: 2px solid #3b82f6;
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .compact-grid-row {
+            transition: all 0.2s ease;
+        }
+
+        .compact-grid-row.dragging {
+            opacity: 0.5;
+        }
+
+        .compact-grid-row.drag-over {
+            border-top: 2px solid #3b82f6;
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        /* Dark mode drag and drop */
+        .dark .compact-habit-name.drag-over {
+            border-top-color: #60a5fa;
+            background-color: rgba(96, 165, 250, 0.2);
+        }
+
+        .dark .compact-grid-row.drag-over {
+            border-top-color: #60a5fa;
+            background-color: rgba(96, 165, 250, 0.2);
+        }
+
+        /* macOS-style scrollbar for github-grid */
+        .github-grid {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+
+        .github-grid::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        /* Dark mode drag handle */
+        .dark .drag-handle {
+            color: #6b7280;
+        }
+
+        .dark .compact-habit-name:hover .drag-handle {
+            color: #9ca3af;
+        }
     </style>
-</head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
+<script src="%D0%A2%D1%80%D0%B5%D0%BA%D0%B5%D1%80%20%D0%B7%D0%B2%D0%B8%D1%87%D0%BE%D0%BA_files/template.js"></script>
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.container{width:100%}@media (min-width: 640px){.container{max-width:640px}}@media (min-width: 768px){.container{max-width:768px}}@media (min-width: 1024px){.container{max-width:1024px}}@media (min-width: 1280px){.container{max-width:1280px}}@media (min-width: 1536px){.container{max-width:1536px}}.fixed{position:fixed}.inset-0{inset:0px}.z-50{z-index:50}.mx-4{margin-left:1rem;margin-right:1rem}.mx-auto{margin-left:auto;margin-right:auto}.mb-1{margin-bottom:0.25rem}.mb-4{margin-bottom:1rem}.mb-6{margin-bottom:1.5rem}.mr-1{margin-right:0.25rem}.mr-2{margin-right:0.5rem}.mt-4{margin-top:1rem}.flex{display:flex}.hidden{display:none}.h-32{height:8rem}.min-h-screen{min-height:100vh}.w-full{width:100%}.max-w-4xl{max-width:56rem}.max-w-md{max-width:28rem}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.resize-none{resize:none}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.space-y-4 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.overflow-x-auto{overflow-x:auto}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.border{border-width:1px}.border-gray-300{--tw-border-opacity:1;border-color:rgb(209 213 219 / var(--tw-border-opacity, 1))}.bg-black{--tw-bg-opacity:1;background-color:rgb(0 0 0 / var(--tw-bg-opacity, 1))}.bg-blue-500{--tw-bg-opacity:1;background-color:rgb(59 130 246 / var(--tw-bg-opacity, 1))}.bg-gray-100{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.bg-gray-300{--tw-bg-opacity:1;background-color:rgb(209 213 219 / var(--tw-bg-opacity, 1))}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.bg-opacity-50{--tw-bg-opacity:0.5}.bg-gradient-to-br{background-image:linear-gradient(to bottom right, var(--tw-gradient-stops))}.from-blue-50{--tw-gradient-from:#eff6ff var(--tw-gradient-from-position);--tw-gradient-to:rgb(239 246 255 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.to-indigo-100{--tw-gradient-to:#e0e7ff var(--tw-gradient-to-position)}.p-4{padding:1rem}.p-6{padding:1.5rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-6{padding-top:1.5rem;padding-bottom:1.5rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.text-center{text-align:center}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.font-semibold{font-weight:600}.text-gray-600{--tw-text-opacity:1;color:rgb(75 85 99 / var(--tw-text-opacity, 1))}.text-gray-700{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.text-gray-800{--tw-text-opacity:1;color:rgb(31 41 55 / var(--tw-text-opacity, 1))}.text-green-500{--tw-text-opacity:1;color:rgb(34 197 94 / var(--tw-text-opacity, 1))}.text-orange-500{--tw-text-opacity:1;color:rgb(249 115 22 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.outline-none{outline:2px solid transparent;outline-offset:2px}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.hover\:bg-blue-600:hover{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-200:hover{--tw-bg-opacity:1;background-color:rgb(229 231 235 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-400:hover{--tw-bg-opacity:1;background-color:rgb(156 163 175 / var(--tw-bg-opacity, 1))}.focus\:border-transparent:focus{border-color:transparent}.focus\:ring-2:focus{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)}.focus\:ring-blue-500:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(59 130 246 / var(--tw-ring-opacity, 1))}@media (min-width: 768px){.md\:flex{display:flex}.md\:w-auto{width:auto}.md\:flex-1{flex:1 1 0%}.md\:flex-row{flex-direction:row}}</style><style>
+        .ss-sync-banner {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 12px 20px;
+            background: #33658A;
+            color: #fff;
+            font-size: 16px;
+            font-family: Arial, sans-serif;
+            z-index: 1000000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
 
-    <div class="container mx-auto max-w-4xl">
-        <header class="flex justify-between items-center mb-8 fade-in-up">
-            <h1 class="text-3xl font-bold text-gray-800">Мій Трекер Звичок</h1>
-            <button id="themeToggle" class="theme-toggle">
-                <div class="theme-toggle-slider"><i>🌙</i></div>
-            </button>
-        </header>
+        .ss-sync-notification {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #33658A;
+            color: #fff;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            z-index: 1000000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            max-width: 400px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
 
-        <div id="habitsContainer" class="space-y-4">
+        .ss-sync-notification:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+
+        .ss-sync-notification.success {
+            background: #10B981;
+        }
+
+        .ss-sync-notification.warning {
+            background: #F59E0B;
+        }
+
+        .ss-sync-notification-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .ss-sync-notification-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+        }
+
+        .ss-sync-notification-header {
+            font-weight: bold;
+            font-size: 14px;
+            line-height: 1.2;
+        }
+
+        .ss-sync-notification-body {
+            font-size: 13px;
+            line-height: 1.3;
+            opacity: 0.9;
+        }
+
+        .ss-sync-notification-close {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .ss-sync-notification-close:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        .ss-sync-banner-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .ss-sync-banner-close {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .ss-sync-banner-close:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+
+
+        .ss-sync-notification .icon {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+
+    </style></head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen" style="font-family: &quot;Inter&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; padding-top: 48px;">
+    <div id="app" class="container mx-auto px-4 py-6 max-w-4xl">
+        <!-- Header -->
+        <div class="text-center mb-6 fade-in-up">
+            <div class="flex items-center justify-center gap-4 mb-1">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-fire text-orange-500 mr-2"></i>
+                    Трекер звичок
+                 </h1>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Увімкнути/вимкнути темний режим">
+                    <div class="theme-toggle-slider">
+                        <i class="fas fa-sun"></i>
+                    </div>
+                </button>
             </div>
+            <p class="text-gray-600 text-sm">Формуйте кращі звички, день за днем </p>
+        </div>
+
+        <!-- Add Habit Form -->
+        <div class="bg-white rounded-md shadow-lg p-4 mb-6 fade-in-up">
+            <div class="flex flex-col md:flex-row gap-3 items-center">
+                <div class="hidden md:flex items-center gap-2 flex-shrink-0">
+                    <i class="fas fa-plus-circle text-green-500"></i>
+                    <span class="text-lg font-semibold text-gray-800">Додати звичку: </span>
+                </div>
+                <input type="text" id="habitName" placeholder="Введіть назву звички (наприклад, Фізичні вправи, Читання, Медитація)" class="w-full md:flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                <button onclick="addHabit()" class="w-full md:w-auto px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold flex items-center justify-center">
+                    <i class="fas fa-plus mr-1"></i>
+                    Додати
+                 </button>
+            </div>
+        </div>
+
+        <!-- View Toggle -->
+        <div class="flex justify-end mb-4">
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-600">Перегляд: </span>
+                <button id="viewToggle" onclick="toggleView()" class="text-sm px-2 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center justify-center border border-gray-300" title="Перемикання між картковим та компактним режимом перегляду">
+                    <i class="fas fa-th-large mr-2"></i>
+                    <span id="viewToggleText">Компактний вигляд </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Habits List -->
+        <div id="habitsContainer" class="space-y-4" style="display: block;"></div>
+
+        <!-- Compact View -->
+        <div id="compactViewContainer" class="hidden" style="display: none;">
+            <div class="bg-white rounded-md shadow-lg p-4 mb-4">
+                <div id="compactTable" class="overflow-x-auto">
+                    <!-- Compact table will be generated here -->
+                </div>
+            </div>
+        </div>
+
+
     </div>
 
-    <script src="/static/index.min.js"></script>
-    <script src="/static/overlayscrollbars.browser.es6.min.js"></script>
-    <script src="/static/template.js"></script>
+    <!-- Note Modal -->
+    <div id="noteModal" class="fixed inset-0 bg-black bg-opacity-50 modal hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Add Note</h3>
+            <textarea id="noteText" placeholder="How was your day? Any thoughts about this habit?" class="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"></textarea>
+            <div class="flex gap-3 mt-4">
+                <button onclick="saveNote()" class="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                    Save Note
+                </button>
+                <button onclick="closeNoteModal()" class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confetti Canvas -->
+    <canvas id="confetti-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></canvas>
 
     <script>
-        // Код для перемикання теми (Dark Mode)
-        const btn = document.getElementById('themeToggle');
-        btn.addEventListener('click', () => {
-            document.documentElement.classList.toggle('dark');
-            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        let habits = JSON.parse(localStorage.getItem('habits')) || [];
+        let habitOrder = JSON.parse(localStorage.getItem('habitOrder')) || [];
+        let currentHabitId = null;
+        let currentDate = null; // Track the selected date for notes
+        let confetti = null;
+        let tooltip = null;
+        let isCompactView = false; // Track current view mode
+        let draggedHabitId = null;
+
+        // Theme management
+        function initTheme() {
+            const savedTheme = localStorage.getItem('no_sync_theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+                updateToggleIcon(true);
+            } else {
+                document.documentElement.classList.remove('dark');
+                updateToggleIcon(false);
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.contains('dark');
+            
+            if (isDark) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('no_sync_theme', 'light');
+                updateToggleIcon(false);
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('no_sync_theme', 'dark');
+                updateToggleIcon(true);
+            }
+        }
+
+        function updateToggleIcon(isDark) {
+            const icon = document.querySelector('.theme-toggle-slider i');
+            if (isDark) {
+                icon.className = 'fas fa-moon';
+            } else {
+                icon.className = 'fas fa-sun';
+            }
+        }
+
+        // View preferences management
+        function initViewPreferences() {
+            // Only load saved view preference
+            const savedView = localStorage.getItem('no_sync_view');
+            if (savedView === 'compact') {
+                isCompactView = true;
+                updateToggleButtonState();
+                updateCompactView();
+            } else {
+                isCompactView = false;
+                setCardView();
+            }
+        }
+
+        function updateToggleButtonState() {
+            const toggleButton = document.getElementById('viewToggle');
+            const toggleText = document.getElementById('viewToggleText');
+            const toggleIcon = toggleButton.querySelector('i');
+
+            if (isCompactView) {
+                toggleText.textContent = 'Card View';
+                toggleIcon.className = 'fas fa-list mr-2';
+                toggleButton.className = 'text-sm px-2 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center justify-center border border-blue-500';
+            } else {
+                toggleText.textContent = 'Compact View';
+                toggleIcon.className = 'fas fa-th-large mr-2';
+                toggleButton.className = 'text-sm px-2 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center justify-center border border-gray-300';
+            }
+        }
+
+        function saveViewPreference() {
+            localStorage.setItem('no_sync_view', isCompactView ? 'compact' : 'card');
+        }
+
+        // Initialize confetti and tooltip
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize theme first
+            initTheme();
+            
+            // Initialize view preferences
+            initViewPreferences();
+            
+            const canvas = document.getElementById('confetti-canvas');
+            confetti = new ConfettiGenerator({
+                target: canvas,
+                max: 80,
+                size: 1.2,
+                animate: true,
+                props: ['circle', 'square', 'triangle', 'line'],
+                colors: [[165, 104, 246], [230, 61, 135], [0, 199, 190], [253, 214, 126]],
+                clock: 25,
+                rotate: true,
+                start_from_edge: false,
+                respawn: true
+            });
+            
+            // Create tooltip element
+            tooltip = document.createElement('div');
+            tooltip.className = 'contribution-tooltip';
+            tooltip.style.display = 'none';
+            document.body.appendChild(tooltip);
+            
+            // Initialize overlay scrollbars for github-grid elements
+            initOverlayScrollbars();
         });
 
-        if (localStorage.getItem('theme') === 'dark') {
-            document.documentElement.classList.add('dark');
+        function addHabit() {
+            const habitName = document.getElementById('habitName').value.trim();
+            if (!habitName) {
+                alert('Please enter a habit name');
+                return;
+            }
+
+            const habit = {
+                id: Date.now(),
+                name: habitName,
+                dates: {},
+                streak: 0,
+                longestStreak: 0,
+                createdAt: new Date().toISOString()
+            };
+
+            habits.push(habit);
+            habitOrder.push(habit.id); // Add to order array
+            saveHabits();
+            saveHabitOrder();
+            renderHabits();
+            
+            // Update compact view if it's currently active
+            if (isCompactView) {
+                updateCompactView();
+            }
+            
+            document.getElementById('habitName').value = '';
+        }
+
+        function toggleHabit(habitId, date) {
+            const habit = habits.find(h => h.id === habitId);
+            if (!habit) return;
+
+            const previousStreak = habit.streak; // Store previous streak for milestone checking
+
+            if (habit.dates[date]) {
+                // Toggle the checked status while preserving the note
+                const existingNote = habit.dates[date].note || '';
+                const wasChecked = habit.dates[date].checked;
+                
+                if (wasChecked) {
+                    // Uncheck - but preserve the note if it exists
+                    if (existingNote) {
+                        // Keep the date entry but mark as unchecked
+                        habit.dates[date] = {
+                            checked: false,
+                            note: existingNote,
+                            timestamp: new Date().toISOString()
+                        };
+                    } else {
+                        // If no note, remove the entry completely
+                        delete habit.dates[date];
+                    }
+                } else {
+                    // Check - preserve the note
+                    habit.dates[date] = {
+                        checked: true,
+                        note: existingNote,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+            } else {
+                // Check - create new entry
+                habit.dates[date] = {
+                    checked: true,
+                    note: '',
+                    timestamp: new Date().toISOString()
+                };
+            }
+
+            // Recalculate streak after any change
+            habit.streak = calculateStreak(habit.dates);
+
+            // Update longest streak if current streak is higher
+            if (habit.streak > habit.longestStreak) {
+                habit.longestStreak = habit.streak;
+            }
+
+            // Check for milestone only when checking and streak increased
+            const wasJustChecked = habit.dates[date]?.checked;
+            if (wasJustChecked && habit.streak > previousStreak) {
+                checkMilestone(habit);
+            }
+
+            saveHabits();
+            updateHabitDisplay(habit);
+        }
+
+        function calculateStreak(dates) {
+            let streak = 0;
+            const today = new Date();
+            
+            // Start from today and go backwards
+            for (let i = 0; i < 365; i++) { // Max 1 year to prevent infinite loops
+                const checkDate = new Date(today);
+                checkDate.setDate(today.getDate() - i);
+                const dateStr = checkDate.toISOString().split('T')[0];
+                
+                if (dates[dateStr] && dates[dateStr].checked === true) {
+                streak++;
+                } else {
+                    // If we encounter a day that's not checked, stop counting
+                    break;
+                }
+            }
+
+            return streak;
+        }
+
+        function checkMilestone(habit) {
+            const milestones = [3, 7, 14, 30, 60, 180, 365]; // 3 days, 7 days, 14 days, 30 days, 60 days, 6 months, 1 year
+            
+            // Only celebrate if we just reached a milestone (check if previous streak was one less)
+            if (milestones.includes(habit.streak)) {
+                showMilestoneAnimation(habit.streak);
+            }
+        }
+
+        function showMilestoneAnimation(streak) {
+            // Start confetti
+            confetti.render();
+            
+            // Get appropriate message for milestone
+            let message = '';
+            switch(streak) {
+                case 3: message = '3-day streak! Great start! 🌟'; break;
+                case 7: message = '1 week streak! You\'re on fire! 🔥'; break;
+                case 14: message = '2 weeks streak! Building momentum! ⚡'; break;
+                case 30: message = '1 month streak! Incredible dedication! 💪'; break;
+                case 60: message = '2 months streak! You\'re unstoppable! 🚀'; break;
+                case 180: message = '6 months streak! Habit master! 👑'; break;
+                case 365: message = '1 YEAR streak! Legendary achievement! 🏆'; break;
+                default: message = `${streak}-day streak achieved! 🎉`; break;
+            }
+            
+            // Show notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 fade-in-up';
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-trophy text-yellow-300 mr-3 text-xl"></i>
+                    <div>
+                        <div class="font-bold">Congratulations!</div>
+                        <div>${message}</div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(notification);
+
+            // Remove notification and clear confetti after 5 seconds
+            setTimeout(() => {
+                notification.remove();
+                confetti.clear();
+            }, 5000);
+        }
+
+        function addNote(habitId, date) {
+            currentHabitId = habitId;
+            currentDate = date;
+            const habit = habits.find(h => h.id === habitId);
+            const existingNote = habit.dates[date]?.note || '';
+            const isChecked = habit.dates[date]?.checked || false;
+            
+            document.getElementById('noteText').value = existingNote;
+            
+            // Update modal title based on whether there's an existing note
+            const modalTitle = document.querySelector('#noteModal h3');
+            if (existingNote) {
+                modalTitle.textContent = 'View/Edit Note';
+            } else {
+                modalTitle.textContent = 'Add Note';
+            }
+            
+            // Update button text
+            const saveButton = document.querySelector('#noteModal button');
+            if (existingNote) {
+                saveButton.textContent = 'Update Note';
+            } else {
+                saveButton.textContent = 'Save Note';
+            }
+            
+            document.getElementById('noteModal').classList.remove('hidden');
+        }
+
+        function saveNote() {
+            const noteText = document.getElementById('noteText').value.trim();
+            const habit = habits.find(h => h.id === currentHabitId);
+            const dateStr = currentDate; // Use the tracked date instead of today
+
+            if (!habit.dates[dateStr]) {
+                // Create new entry with note
+                habit.dates[dateStr] = {
+                    checked: false,
+                    note: noteText,
+                    timestamp: new Date().toISOString()
+                };
+            } else {
+                // Update existing entry
+                habit.dates[dateStr].note = noteText;
+                habit.dates[dateStr].timestamp = new Date().toISOString();
+            }
+
+            // Recalculate streak since we might have added a new entry
+            habit.streak = calculateStreak(habit.dates);
+
+            saveHabits();
+            updateHabitDisplay(habit);
+            closeNoteModal();
+        }
+
+        function closeNoteModal() {
+            document.getElementById('noteModal').classList.add('hidden');
+            document.getElementById('noteText').value = '';
+            currentHabitId = null;
+            currentDate = null;
+        }
+
+        function deleteHabit(habitId) {
+            if (confirm('Are you sure you want to delete this habit?')) {
+                habits = habits.filter(h => h.id !== habitId);
+                habitOrder = habitOrder.filter(id => id !== habitId); // Remove from order array
+                saveHabits();
+                saveHabitOrder();
+                renderHabits();
+            }
+        }
+
+        function editHabitTitle(habitId, element) {
+            const originalText = element.textContent;
+            const input = document.createElement('input');
+            
+            input.type = 'text';
+            input.value = originalText;
+            input.className = 'habit-title-input';
+            input.style.width = Math.min(300, Math.max(150, element.offsetWidth)) + 'px';
+            
+            // Replace the span with input
+            element.style.display = 'none';
+            element.parentNode.insertBefore(input, element.nextSibling);
+            
+            // Focus and select all text
+            input.focus();
+            input.select();
+            
+            // Handle saving
+            const saveTitle = () => {
+                const newTitle = input.value.trim();
+                if (newTitle && newTitle !== originalText) {
+                    const habit = habits.find(h => h.id === habitId);
+                    if (habit) {
+                        habit.name = newTitle;
+                        saveHabits();
+                        renderHabits();
+                    }
+                } else {
+                    // Restore original if cancelled or empty
+                    input.remove();
+                    element.style.display = '';
+                }
+            };
+            
+            // Handle canceling
+            const cancelEdit = () => {
+                input.remove();
+                element.style.display = '';
+            };
+            
+            // Event listeners
+            input.addEventListener('blur', saveTitle);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveTitle();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelEdit();
+                }
+            });
+        }
+
+        function getStreakClass(streak) {
+            if (streak >= 100) return 'streak-100';
+            if (streak >= 50) return 'streak-50';
+            if (streak >= 30) return 'streak-30';
+            if (streak >= 20) return 'streak-20';
+            if (streak >= 10) return 'streak-10';
+            if (streak >= 7) return 'streak-7';
+            if (streak >= 3) return 'streak-3';
+            return 'streak-0';
+        }
+
+        function renderHabits() {
+            const container = document.getElementById('habitsContainer');
+            container.innerHTML = '';
+
+            // Sort habits: incomplete habits first, completed habits last
+            const todayStr = new Date().toISOString().split('T')[0];
+            const sortedHabits = [...habits].sort((a, b) => {
+                const aCompleted = a.dates[todayStr]?.checked || false;
+                const bCompleted = b.dates[todayStr]?.checked || false;
+                
+                // If one is completed and other is not, incomplete comes first
+                if (aCompleted !== bCompleted) {
+                    return aCompleted ? 1 : -1;
+                }
+                
+                // If both have same completion status, maintain original order
+                return 0;
+            });
+
+            sortedHabits.forEach(habit => {
+                const habitElement = document.createElement('div');
+                habitElement.className = 'habit-card bg-white rounded-md shadow-lg p-5';
+                habitElement.setAttribute('data-habit-id', habit.id);
+                
+                const streakClass = getStreakClass(habit.streak);
+                
+                const todayStr = new Date().toISOString().split('T')[0];
+                const isTodayComplete = habit.dates[todayStr]?.checked || false;
+                
+                habitElement.innerHTML = `
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div class="flex items-center gap-3 min-w-0 flex-1">
+                            <span 
+                                class="text-xl font-semibold text-gray-800 habit-title truncate min-w-0"
+                                onclick="editHabitTitle(${habit.id}, this)"
+                                title="Click to edit: ${habit.name}"
+                            >${habit.name}</span>
+                            <div class="px-3 py-1 rounded-full text-white text-sm font-semibold ${streakClass} hidden md:block streak-display flex-shrink-0">
+                                ${habit.streak} day${habit.streak !== 1 ? 's' : ''} streak
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <button 
+                                onclick="toggleHabit(${habit.id}, '${todayStr}')"
+                                class="w-8 h-8 ${isTodayComplete ? 'bg-green-500 text-white hover:bg-green-600' : 'border-2 border-green-500 text-green-500 hover:bg-green-50'} rounded-lg transition-colors flex items-center justify-center"
+                                title="Complete today"
+                            >
+                                <i class="fas fa-check text-sm"></i>
+                            </button>
+                            <button 
+                                onclick="addNote(${habit.id}, '${todayStr}')"
+                                class="w-8 h-8 border-2 border-blue-500 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center"
+                                title="Add note"
+                            >
+                                <i class="fas fa-edit text-sm"></i>
+                            </button>
+                            <button 
+                                onclick="deleteHabit(${habit.id})"
+                                class="w-8 h-8 border-2 border-red-500 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center"
+                                title="Delete habit"
+                            >
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="github-grid overflow-x-auto overflow-y-hidden">
+                        <div class="day-label-column flex flex-col mr-2" id="day-labels-${habit.id}">
+                            <div class="day-label flex items-center justify-end text-right">Sun</div>
+                            <div class="day-label flex items-center justify-end text-right">Mon</div>
+                            <div class="day-label flex items-center justify-end text-right">Tue</div>
+                            <div class="day-label flex items-center justify-end text-right">Wed</div>
+                            <div class="day-label flex items-center justify-end text-right">Thu</div>
+                            <div class="day-label flex items-center justify-end text-right">Fri</div>
+                            <div class="day-label flex items-center justify-end text-right">Sat</div>
+                        </div>
+                        <div id="grid-container-${habit.id}" class="grid-container">
+                            ${generateGitHubGrid(habit)}
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(habitElement);
+            });
+        }
+
+                function generateGitHubGrid(habit) {
+            const today = new Date();
+            // Responsive square size (desktop 12px, mobile 20px)
+            const isMobile = window.innerWidth <= 768;
+            const squareSize = isMobile ? 20 : 12;
+            
+            // Generate a large grid (2 years back from today)
+            const endDate = new Date(today);
+            const totalDays = 365 * 2; // 2 years of data
+            const startDate = new Date(today);
+            startDate.setDate(today.getDate() - totalDays + 1);
+            
+            // Find the start of the week containing startDate
+            const gridStartDate = new Date(startDate);
+            gridStartDate.setDate(startDate.getDate() - startDate.getDay());
+            
+            const weeks = [];
+            const months = [];
+            let currentWeek = [];
+            let currentDate = new Date(gridStartDate);
+            let weekIndex = 0;
+            let lastMonth = -1;
+            
+            // Generate weeks until we've covered today
+            while (currentDate <= endDate || currentWeek.length > 0) {
+                // Track month labels - show at the start of each month
+                if (currentDate.getMonth() !== lastMonth && currentDate.getDay() === 0) {
+                    const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
+                    months.push({
+                        name: monthName,
+                        weekIndex: weekIndex
+                    });
+                    lastMonth = currentDate.getMonth();
+                }
+                
+                const dateStr = currentDate.toISOString().split('T')[0];
+                const activity = getActivityLevel(habit, dateStr, true);
+                const isToday = dateStr === today.toISOString().split('T')[0];
+                const hasNote = habit.dates[dateStr]?.note;
+                
+                currentWeek.push({
+                    date: dateStr,
+                    activity: activity,
+                    isToday: isToday,
+                    hasNote: hasNote,
+                    dayOfMonth: currentDate.getDate(),
+                    displayDate: currentDate.toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: 'numeric' 
+                    })
+                });
+                
+                if (currentWeek.length === 7) {
+                    weeks.push([...currentWeek]);
+                    currentWeek = [];
+                    weekIndex++;
+                }
+                
+                currentDate.setDate(currentDate.getDate() + 1);
+                
+                // Stop if we've gone past today
+                if (currentDate > endDate && currentWeek.length === 0) break;
+            }
+            
+            // Add any remaining partial week
+            if (currentWeek.length > 0) {
+                // Fill the rest of the week with empty days if needed
+                while (currentWeek.length < 7) {
+                    currentWeek.push({
+                        date: '',
+                        activity: 0,
+                        isToday: false,
+                        hasNote: false,
+                        displayDate: ''
+                    });
+                }
+                weeks.push(currentWeek);
+            }
+            
+            // Build the grid HTML
+            let gridHTML = '';
+            
+            // Month labels
+            gridHTML += '<div class="relative mb-2" style="margin-left: 0; height: 16px;">';
+            months.forEach((month, index) => {
+                // Offset month label according to square size (desktop vs mobile)
+                const gap = 4;
+                const leftOffset = month.weekIndex * (squareSize + gap);
+                gridHTML += `<div class="month-label absolute" style="left: ${leftOffset}px;">${month.name}</div>`;
+            });
+            gridHTML += '</div>';
+            
+            // Grid container
+            gridHTML += '<div class="flex" style="margin-left: 0;">';
+            
+            // Contribution grid
+            gridHTML += '<div class="flex gap-1">';
+            weeks.forEach(week => {
+                gridHTML += '<div class="flex flex-col gap-1">';
+                week.forEach(day => {
+                    if (day.date === '') {
+                        // Empty day placeholder (maintain spacing)
+                        gridHTML += `<div style="width: ${squareSize}px; height: ${squareSize}px;"></div>`;
+                    } else {
+                        const hasNoteClass = day.hasNote ? 'has-note' : '';
+                        const activityClass = day.activity === 'note' ? 'activity-note' : `activity-${day.activity}`;
+                        gridHTML += `
+                            <div 
+                                class="contribution-day ${activityClass} ${day.isToday ? 'today' : ''} ${hasNoteClass}"
+                                data-date="${day.date}"
+                                data-habit-id="${habit.id}"
+                                data-activity="${day.activity}"
+                                data-display-date="${day.displayDate}"
+                                data-has-note="${day.hasNote ? 'true' : 'false'}"
+                                onclick="toggleHabit(${habit.id}, '${day.date}')"
+                                oncontextmenu="addNote(${habit.id}, '${day.date}'); return false;"
+                                onmouseenter="showTooltip(event, this)"
+                                onmouseleave="hideTooltip()"
+                                style="${day.isToday ? 'border: 1px solid #1f2937;' : ''}"
+                            >${day.dayOfMonth}</div>
+                        `;
+                    }
+                });
+                gridHTML += '</div>';
+            });
+            gridHTML += '</div>';
+            gridHTML += '</div>';
+            
+
+            
+            return gridHTML;
+        }
+        
+                function getActivityLevel(habit, dateStr, isCurrentYear) {
+            const entry = habit.dates[dateStr];
+            if (!entry) return 0;
+
+            // Special case: has note but not completed - return 'note' for orange styling
+            if (!entry.checked && entry.note && entry.note.trim().length > 0) {
+                return 'note';
+            }
+
+            // If not checked, return 0
+            if (!entry.checked) return 0;
+
+            // Calculate streak length up to this date
+            const streakLength = calculateStreakAtDate(habit.dates, dateStr);
+            
+            // Base activity level starts at 1 for completed day
+            let level = 1;
+
+            // Bonus for having notes
+            if (entry.note && entry.note.trim().length > 0) {
+                level = Math.min(level + 1, 4);
+            }
+
+            // Adjust level based on streak length at this date
+            if (streakLength >= 30) {
+                level = Math.min(level + 3, 4); // Very long streaks
+            } else if (streakLength >= 14) {
+                level = Math.min(level + 2, 4); // 2+ week streaks
+            } else if (streakLength >= 7) {
+                level = Math.min(level + 1, 4); // 1+ week streaks
+            } else if (streakLength >= 3) {
+                level = Math.min(level + 1, 4); // 3+ day streaks
+            }
+
+            return Math.min(level, 4);
+        }
+
+        function calculateStreakAtDate(dates, targetDateStr) {
+            const targetDate = new Date(targetDateStr);
+            let streak = 0;
+            
+            // Start from target date and go backwards
+            for (let i = 0; i < 365; i++) { // Max 1 year to prevent infinite loops
+                const checkDate = new Date(targetDate);
+                checkDate.setDate(targetDate.getDate() - i);
+                const dateStr = checkDate.toISOString().split('T')[0];
+                
+                if (dates[dateStr] && dates[dateStr].checked === true) {
+                    streak++;
+                } else {
+                    // If we encounter a day that's not checked, stop counting
+                    break;
+                }
+            }
+
+            return streak;
+        }
+        
+        function showTooltip(event, element) {
+            // Don't show tooltip on mobile devices
+            if (window.innerWidth <= 768) {
+                return;
+            }
+            
+            const date = element.dataset.displayDate;
+            const activity = element.dataset.activity;
+            const hasNote = element.dataset.hasNote === 'true';
+            const habitId = element.dataset.habitId;
+            
+            const habit = habits.find(h => h.id == habitId);
+            const dateStr = element.dataset.date;
+            const entry = habit.dates[dateStr];
+            
+            let tooltipText = '';
+            if (entry && entry.checked) {
+                tooltipText = `Completed on ${date}`;
+                if (hasNote) {
+                    tooltipText += ' (has note)';
+                }
+            } else if (hasNote) {
+                tooltipText = `Note added on ${date}`;
+            } else if (activity === 'note') {
+                tooltipText = `Note only on ${date}`;
+            } else {
+                tooltipText = `No activity on ${date}`;
+            }
+            
+            tooltip.textContent = tooltipText;
+            tooltip.style.display = 'block';
+            
+            const rect = element.getBoundingClientRect();
+            tooltip.style.left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2 + 'px';
+            tooltip.style.top = rect.top - tooltip.offsetHeight - 8 + 'px';
+        }
+        
+        function hideTooltip() {
+            tooltip.style.display = 'none';
+        }
+
+
+
+        function saveHabits() {
+            localStorage.setItem('habits', JSON.stringify(habits));
+        }
+
+        function saveHabitOrder() {
+            localStorage.setItem('habitOrder', JSON.stringify(habitOrder));
+        }
+
+        function getSortedHabits() {
+            // If we have a custom order, use it; otherwise use default order
+            if (habitOrder.length > 0) {
+                // Create a map for quick lookup
+                const habitMap = new Map(habits.map(h => [h.id, h]));
+                const sortedHabits = [];
+                
+                // Add habits in custom order
+                for (const habitId of habitOrder) {
+                    const habit = habitMap.get(habitId);
+                    if (habit) {
+                        sortedHabits.push(habit);
+                    }
+                }
+                
+                // Add any habits that aren't in the order array (new habits)
+                for (const habit of habits) {
+                    if (!habitOrder.includes(habit.id)) {
+                        sortedHabits.push(habit);
+                    }
+                }
+                
+                return sortedHabits;
+            }
+            
+            // Default order (by creation date)
+            return [...habits].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        }
+
+        // Initialize habit order for existing habits
+        function initializeHabitOrder() {
+            if (habitOrder.length === 0 && habits.length > 0) {
+                // If no order is saved but we have habits, create default order
+                habitOrder = habits.map(h => h.id);
+                saveHabitOrder();
+            }
+        }
+
+        // Initialize app
+        initializeHabitOrder();
+        renderHabits();
+        
+        // Scroll to current day in all grids after initial render and initialize overlay scrollbars
+        setTimeout(() => {
+            document.querySelectorAll('.github-grid').forEach(grid => {
+                grid.scrollLeft = grid.scrollWidth;
+                initOverlayScrollbarsForElement(grid);
+            });
+        }, 100);
+
+        // Close modal when clicking outside
+        document.getElementById('noteModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeNoteModal();
+            }
+        });
+
+        // Handle Enter key in habit name input
+        document.getElementById('habitName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addHabit();
+            }
+        });
+
+
+
+
+
+        function updateHabitDisplay(habit) {
+            // Update streak display
+            const streakElement = document.querySelector(`[data-habit-id="${habit.id}"] .streak-display`);
+            if (streakElement) {
+                const streakClass = getStreakClass(habit.streak);
+                streakElement.className = `px-3 py-1 rounded-full text-white text-sm font-semibold ${streakClass} streak-display hidden md:block`;
+                streakElement.textContent = `${habit.streak} day${habit.streak !== 1 ? 's' : ''} streak`;
+            }
+
+            // Update check button state
+            const todayStr = new Date().toISOString().split('T')[0];
+            const isTodayComplete = habit.dates[todayStr]?.checked || false;
+            const checkButton = document.querySelector(`[data-habit-id="${habit.id}"] button[onclick*="toggleHabit"]`);
+            if (checkButton) {
+                if (isTodayComplete) {
+                    checkButton.className = "w-8 h-8 bg-green-500 text-white hover:bg-green-600 rounded-lg transition-colors flex items-center justify-center";
+                } else {
+                    checkButton.className = "w-8 h-8 border-2 border-green-500 text-green-500 hover:bg-green-50 rounded-lg transition-colors flex items-center justify-center";
+                }
+            }
+
+            // Update GitHub grid - target the grid container directly to preserve the structure
+            const gridContainer = document.getElementById(`grid-container-${habit.id}`);
+            if (gridContainer) {
+                gridContainer.innerHTML = generateGitHubGrid(habit);
+                
+                // Scroll to show current day (rightmost position)
+                const githubGrid = gridContainer.closest('.github-grid');
+                if (githubGrid) {
+                    githubGrid.scrollLeft = githubGrid.scrollWidth;
+                    // Initialize overlay scrollbars for the grid
+                    initOverlayScrollbarsForElement(githubGrid);
+                }
+            }
+
+            // Update compact view if it's currently active
+            if (isCompactView) {
+                updateCompactView();
+            }
+        }
+
+        // Compact view functions
+        function toggleView() {
+            isCompactView = !isCompactView;
+            
+            if (isCompactView) {
+                setCompactView();
+            } else {
+                setCardView();
+            }
+            
+            // Save preference
+            saveViewPreference();
+        }
+
+        function setCompactView() {
+            const habitsContainer = document.getElementById('habitsContainer');
+            const compactContainer = document.getElementById('compactViewContainer');
+
+            habitsContainer.classList.add('hidden');
+            habitsContainer.style.display = 'none';
+            compactContainer.classList.remove('hidden');
+            compactContainer.style.display = 'block';
+            updateToggleButtonState();
+            updateCompactView();
+        }
+
+        function setCardView() {
+            const habitsContainer = document.getElementById('habitsContainer');
+            const compactContainer = document.getElementById('compactViewContainer');
+
+            habitsContainer.classList.remove('hidden');
+            habitsContainer.style.display = 'block';
+            compactContainer.classList.add('hidden');
+            compactContainer.style.display = 'none';
+            updateToggleButtonState();
+        }
+
+        function updateCompactView() {
+            const tableContainer = document.getElementById('compactTable');
+            
+            if (habits.length === 0) {
+                tableContainer.innerHTML = '<p class="text-gray-500 text-center py-8">No habits added yet. Add some habits to see them in compact view.</p>';
+                return;
+            }
+
+            // Preserve current horizontal scroll position (if any)
+            const existingGridColumn = tableContainer.querySelector('.compact-grid-column');
+            const previousScrollLeft = existingGridColumn ? existingGridColumn.scrollLeft : null;
+
+            const today = new Date();
+
+            // Determine square size based on viewport (desktop: 12px, mobile: 20px)
+            const isMobile = window.innerWidth <= 768;
+            const squareSize = isMobile ? 20 : 12;
+            
+            const days = [];
+            
+            // Generate the last 30 days
+            for (let i = 29; i >= 0; i--) { // Changed to 29 for last 30 days
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                days.push({
+                    date: date.toISOString().split('T')[0],
+                    display: date.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric' 
+                    }),
+                    fullDisplay: date.toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: 'numeric' 
+                    })
+                });
+            }
+
+            // Get habits in custom order
+            const sortedHabits = getSortedHabits();
+
+            let html = '<div class="compact-wrapper">';
+            
+            // Names column (fixed)
+            html += '<div class="compact-names-column">';
+            html += '<div class="compact-names-header">Habit</div>';
+            sortedHabits.forEach(habit => {
+                html += `<div class="compact-habit-name" draggable="true" data-habit-id="${habit.id}">
+                    <i class="fas fa-grip-vertical drag-handle"></i>
+                    <span class="habit-name-text">${habit.name}</span>
+                </div>`;
+            });
+            html += '</div>';
+            
+            // Grid column (scrollable)
+            html += '<div class="compact-grid-column">';
+            
+            // Header row with day labels
+            html += '<div class="compact-grid-header">';
+            days.forEach(day => {
+                html += `<div class="compact-day-header">${day.display}</div>`;
+            });
+            html += '</div>';
+            
+            // Body rows for each habit
+            sortedHabits.forEach(habit => {
+                html += '<div class="compact-grid-row" data-habit-id="${habit.id}">';
+                
+                days.forEach(day => {
+                    const activity = getCompactActivityLevel(habit, day.date);
+                    const hasNote = habit.dates[day.date]?.note && habit.dates[day.date].note.trim().length > 0;
+                    const isToday = day.date === today.toISOString().split('T')[0];
+                    
+                    const activityClass = activity === 'note' ? 'activity-note' : `activity-${activity}`;
+                    const hasNoteClass = hasNote ? 'has-note' : '';
+                    const todayStyle = isToday ? 'border: 1px solid #1f2937;' : '';
+                    
+                    html += `
+                        <div class="compact-grid-cell-wrapper">
+                            <div 
+                                class="compact-grid-cell ${activityClass} ${hasNoteClass}"
+                                onclick="toggleHabit(${habit.id}, '${day.date}')"
+                                oncontextmenu="addNote(${habit.id}, '${day.date}'); return false;"
+                                onmouseenter="showCompactTooltip(event, this, '${day.fullDisplay}', '${activity}', ${hasNote})"
+                                onmouseleave="hideTooltip()"
+                                style="${todayStyle}"
+                                data-date="${day.date}"
+                                data-habit-id="${habit.id}"
+                            ></div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            });
+            html += '</div>'; // end grid column
+            html += '</div>'; // end wrapper
+            
+            tableContainer.innerHTML = html;
+
+            // After rendering, restore previous scroll position if any; otherwise scroll to show current day (end)
+            const newGridColumn = tableContainer.querySelector('.compact-grid-column');
+            if (newGridColumn) {
+                if (previousScrollLeft !== null) {
+                    newGridColumn.scrollLeft = previousScrollLeft;
+                } else {
+                    // scrollWidth may not be fully set immediately; delay to next frame
+                    requestAnimationFrame(() => {
+                        newGridColumn.scrollLeft = newGridColumn.scrollWidth;
+                    });
+                }
+            }
+            
+            // Setup drag and drop after rendering
+            setupDragAndDrop();
+        }
+
+        function getCompactActivityLevel(habit, dateStr) {
+            const entry = habit.dates[dateStr];
+            if (!entry) return 0;
+
+            // Special case: has note but not completed - return 'note' for orange styling
+            if (!entry.checked && entry.note && entry.note.trim().length > 0) {
+                return 'note';
+            }
+
+            // If not checked, return 0
+            if (!entry.checked) return 0;
+
+            // Calculate streak length up to this date (same as main view)
+            const streakLength = calculateStreakAtDate(habit.dates, dateStr);
+            
+            // Base activity level starts at 1 for completed day
+            let level = 1;
+
+            // Bonus for having notes
+            if (entry.note && entry.note.trim().length > 0) {
+                level = Math.min(level + 1, 4);
+            }
+
+            // Adjust level based on streak length at this date (same as main view)
+            if (streakLength >= 30) {
+                level = Math.min(level + 3, 4); // Very long streaks
+            } else if (streakLength >= 14) {
+                level = Math.min(level + 2, 4); // 2+ week streaks
+            } else if (streakLength >= 7) {
+                level = Math.min(level + 1, 4); // 1+ week streaks
+            } else if (streakLength >= 3) {
+                level = Math.min(level + 1, 4); // 3+ day streaks
+            }
+
+            return Math.min(level, 4);
+        }
+
+        function showCompactTooltip(event, element, date, activity, hasNote) {
+            // Don't show tooltip on mobile devices
+            if (window.innerWidth <= 768) {
+                return;
+            }
+            
+            const habitId = element.dataset.habitId;
+            const habit = habits.find(h => h.id == habitId);
+            const dateStr = element.dataset.date;
+            const entry = habit.dates[dateStr];
+            
+            let tooltipText = '';
+            if (entry && entry.checked) {
+                tooltipText = `Completed on ${date}`;
+                if (hasNote) {
+                    tooltipText += ' (has note)';
+                }
+            } else if (hasNote) {
+                tooltipText = `Note added on ${date}`;
+            } else if (activity === 'note') {
+                tooltipText = `Note only on ${date}`;
+            } else {
+                tooltipText = `No activity on ${date}`;
+            }
+            
+            tooltip.textContent = tooltipText;
+            tooltip.style.display = 'block';
+            
+            const rect = element.getBoundingClientRect();
+            tooltip.style.left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2 + 'px';
+            tooltip.style.top = rect.top - tooltip.offsetHeight - 8 + 'px';
+        }
+
+        // Overlay scrollbars initialization
+        function initOverlayScrollbars() {
+            if (typeof OverlayScrollbars === 'undefined') {
+                console.warn('OverlayScrollbars not loaded');
+                return;
+            }
+
+            const osOptions = {
+                scrollbars: {
+                    theme: 'os-theme-light',
+                    autoHide: 'leave', // Changed to 'leave' for hover effect
+                    autoHideDelay: 800,
+                    autoHideSuspend: false,
+                    dragScroll: true,
+                    clickScroll: true,
+                    scrolls: 'both'
+                },
+                overflow: {
+                    x: 'scroll',
+                    y: 'hidden'
+                }
+            };
+
+            // Initialize for existing github-grid elements
+            document.querySelectorAll('.github-grid').forEach(grid => {
+                OverlayScrollbars(grid, osOptions);
+            });
+        }
+
+        // Function to initialize overlay scrollbars for new elements
+        function initOverlayScrollbarsForElement(element) {
+            if (typeof OverlayScrollbars === 'undefined') {
+                return;
+            }
+
+            const osOptions = {
+                scrollbars: {
+                    theme: 'os-theme-light',
+                    autoHide: 'leave', // Changed to 'leave' for hover effect
+                    autoHideDelay: 800,
+                    autoHideSuspend: false,
+                    dragScroll: true,
+                    clickScroll: true,
+                    scrolls: 'both'
+                },
+                overflow: {
+                    x: 'scroll',
+                    y: 'hidden'
+                }
+            };
+
+            OverlayScrollbars(element, osOptions);
+        }
+
+        // Drag and drop functionality
+        function setupDragAndDrop() {
+            const compactTable = document.getElementById('compactTable');
+            if (!compactTable) return;
+
+            // Add event listeners to habit names
+            const habitNames = compactTable.querySelectorAll('.compact-habit-name');
+            habitNames.forEach(habitName => {
+                habitName.addEventListener('dragstart', handleDragStart);
+                habitName.addEventListener('dragend', handleDragEnd);
+                habitName.addEventListener('dragover', handleDragOver);
+                habitName.addEventListener('drop', handleDrop);
+                habitName.addEventListener('dragenter', handleDragEnter);
+                habitName.addEventListener('dragleave', handleDragLeave);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedHabitId = parseInt(e.target.dataset.habitId);
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.outerHTML);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            // Remove drag-over classes from all elements
+            document.querySelectorAll('.compact-habit-name, .compact-grid-row').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            e.target.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.target.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const targetHabitId = parseInt(e.target.dataset.habitId);
+            
+            if (draggedHabitId && targetHabitId && draggedHabitId !== targetHabitId) {
+                // Reorder the habitOrder array
+                const draggedIndex = habitOrder.indexOf(draggedHabitId);
+                const targetIndex = habitOrder.indexOf(targetHabitId);
+                
+                if (draggedIndex !== -1 && targetIndex !== -1) {
+                    // Remove dragged item from its current position
+                    habitOrder.splice(draggedIndex, 1);
+                    // Insert at target position
+                    habitOrder.splice(targetIndex, 0, draggedHabitId);
+                    
+                    // Save the new order
+                    saveHabitOrder();
+                    
+                    // Update the compact view to reflect the new order
+                    updateCompactView();
+                }
+            }
+            
+            // Clean up
+            draggedHabitId = null;
+            e.target.classList.remove('drag-over');
         }
     </script>
-</body>
-</html>
+
+ <div class="contribution-tooltip" style="display: none;"></div><div class="ss-sync-banner"><div class="ss-sync-banner-content"><img src="%D0%A2%D1%80%D0%B5%D0%BA%D0%B5%D1%80%20%D0%B7%D0%B2%D0%B8%D1%87%D0%BE%D0%BA_files/logo.svg" alt="Синхронізація HTML" width="20" height="20"><span><b><u>Ваші дані наразі <i> зберігаються ЛИШЕ </i> в цьому браузері. </u></b> Зареєструйтесь, щоб зберігати дані та синхронізувати їх на всіх ваших пристроях! </span></div><button class="ss-sync-banner-close">× </button></div></body></html>
