@@ -2,35 +2,70 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style> body { font-family: 'Inter', sans-serif; } </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-100 to-purple-100 min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-sm">
-        <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Create Account</h2>
-        
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <div class="bg-red-100 text-red-600 p-3 rounded mb-4 text-sm">{{ messages[0] }}</div>
-        {% endif %}
-        {% endwith %}
+<body class="bg-gradient-to-br from-indigo-100 to-purple-200 min-h-screen flex items-center justify-center p-4">
 
-        <form method="POST">
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Username</label>
-                <input type="text" name="username" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 outline-none" required>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all hover:scale-[1.01] duration-300">
+        
+        <div class="bg-purple-600 p-8 text-center">
+            <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl shadow-inner">
+                <i class="fas fa-user-plus"></i>
             </div>
-            <div class="mb-6">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
-                <input type="password" name="password" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 outline-none" required>
+            <h2 class="text-3xl font-bold text-white tracking-wide">Join Us</h2>
+            <p class="text-purple-100 text-sm mt-2">Start organizing your life today</p>
+        </div>
+
+        <div class="p-8">
+            
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded mb-6 text-sm flex items-center gap-2 animate-pulse">
+                    <i class="fas fa-exclamation-circle"></i>
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+            {% endwith %}
+
+            <form method="POST" class="space-y-6">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-user text-gray-400"></i>
+                    </div>
+                    <input type="text" name="username" 
+                           class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all text-gray-700" 
+                           placeholder="Choose a username" required>
+                </div>
+
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-key text-gray-400"></i>
+                    </div>
+                    <input type="password" name="password" 
+                           class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all text-gray-700" 
+                           placeholder="Create password" required>
+                </div>
+
+                <button type="submit" 
+                        class="w-full bg-purple-600 text-white font-bold py-3.5 rounded-lg hover:bg-purple-700 focus:ring-4 focus:ring-purple-300 transition-all shadow-lg hover:shadow-xl transform active:scale-95 flex items-center justify-center gap-2">
+                    <span>Create Account</span>
+                    <i class="fas fa-rocket"></i>
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-500">
+                    Already have an account? 
+                    <a href="/login" class="text-purple-600 font-bold hover:underline hover:text-purple-800 transition">Log In</a>
+                </p>
             </div>
-            <button type="submit" class="w-full bg-purple-600 text-white font-bold py-2 rounded-lg hover:bg-purple-700 transition">Sign Up</button>
-        </form>
-        <p class="mt-4 text-center text-sm text-gray-600">
-            Already have an account? <a href="/login" class="text-purple-500 font-bold hover:underline">Login</a>
-        </p>
+        </div>
     </div>
+
 </body>
 </html>
