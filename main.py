@@ -86,6 +86,49 @@ def calculate_current_stats(user):
     tasks_done = len([t for t in tasks_all if t.is_completed])
     return habit_score, tasks_done, tasks_total
 
+# НОВА ФУНКЦІЯ: Генерує дані для Heatmap (по днях)
+def get_weekly_grid(user, start_date):
+    user_habits = Habit.query.filter_by(user_id=user.id).all()
+    total_habits_count = len(user_habits)
+    
+    days_data = [] # Список з 7 значень (0-100%)
+    
+    if total_habits_count == 0:
+        return {'days': [0]*7, 'score': 0, 'mood': 'sad', 'trend': 'down'}
+
+    week_total_logs = 0
+    habit_ids = [h.id for h in user_habits]
+
+    for i in range(7):
+        current_day = start_date + timedelta(days=i)
+        # Рахуємо, скільки звичок виконано в цей конкретний день
+        logs_count = HabitLog.query.filter(
+            HabitLog.habit_id.in_(habit_ids), 
+            HabitLog.date == current_day
+        ).count()
+        
+        # Відсоток дня
+        day_percentage = int((logs_count / total_habits_count) * 100)
+        days_data.append(day_percentage)
+        week_total_logs += logs_count
+
+    # Загальний скор тижня
+    week_score = int((week_total_logs / (total_habits_count * 7)) * 100)
+    
+    # Визначаємо настрій (як на малюнку)
+    if week_score >= 80:
+        mood = 'wow'  # Happy
+        trend = 'up'
+    elif week_score >= 40:
+        mood = 'ok'   # Normal
+        trend = 'flat'
+    else:
+        mood = 'sad'  # Sad
+        trend = 'down'
+
+    return {'days': days_data, 'score': week_score, 'mood': mood, 'trend': trend}
+
+
 # --- ROUTES ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -121,13 +164,12 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    # --- TASKS ---
+    # Tasks & Habits Logic
     tasks = Task.query.filter_by(user_id=current_user.id, is_archived=False).all()
     timing_order = {'urgent': 0, 'this_week': 1, 'next_week': 2, 'later': 3}
     tasks.sort(key=lambda t: (t.is_completed, timing_order.get(t.timing, 3)))
     categories = sorted(list(set([t.category for t in tasks if t.category])))
     
-    # --- HABITS ---
     habits = Habit.query.filter_by(user_id=current_user.id).all()
     week_dates = get_week_dates()
     habit_grid = []
@@ -142,53 +184,59 @@ def index():
         progress = int((completed_count / 7) * 100)
         habit_grid.append({'obj': habit, 'days': days_status, 'progress': progress})
 
-    # --- STATS ---
+    # Stats Logic
     habit_score, tasks_done, tasks_total = calculate_current_stats(current_user)
     verdict = "Normal"
     if habit_score > 85: verdict = "Legendary! 🔥"
     elif habit_score > 50: verdict = "Stable 👍"
     else: verdict = "Needs Focus 😬"
 
-    # --- CHART DATA (Last 2 Reports + Current) ---
-    past_reports = WeeklyReport.query.filter_by(user_id=current_user.id)\
-        .order_by(WeeklyReport.created_at.desc()).limit(2).all()
+    # --- HEATMAP DATA GENERATION ---
+    today = date.today()
+    current_week_start = today - timedelta(days=today.weekday())
     
-    # Sort: [Oldest, Newer] for chart left-to-right logic
-    past_reports.reverse() 
+    # 1. This Week
+    this_week_data = get_weekly_grid(current_user, current_week_start)
+    this_week_data['label'] = "This Week"
     
-    chart_data = []
-    
-    # Add historic data if available
-    for i, r in enumerate(past_reports):
-        label = "2 Weeks Ago" if i == 0 and len(past_reports) == 2 else "Last Week"
-        chart_data.append({
-            'label': label,
-            'score': r.habit_score,
-            'color': 'bg-gray-300 dark:bg-gray-600'
-        })
+    # 2. Last Week
+    last_week_start = current_week_start - timedelta(days=7)
+    last_week_data = get_weekly_grid(current_user, last_week_start)
+    last_week_data['label'] = "Last Week"
 
-    # If no history, add empty placeholder for visual balance
-    if not chart_data:
-        chart_data.append({'label': 'Last Week', 'score': 0, 'color': 'bg-gray-200 dark:bg-gray-700 opacity-30'})
+    # 3. 2 Weeks Ago
+    before_last_start = last_week_start - timedelta(days=7)
+    before_last_data = get_weekly_grid(current_user, before_last_start)
+    before_last_data['label'] = "2 Weeks Ago"
 
-    # Add Current Week
-    chart_data.append({
-        'label': 'This Week',
-        'score': habit_score,
-        'color': 'bg-green-500'
-    })
+    # Order for display: Oldest -> Newest (Left -> Right)
+    heatmap_data = [before_last_data, last_week_data, this_week_data]
 
     return render_template('dashboard.html', 
                            tasks=tasks, categories=categories, habits=habit_grid, 
                            week_dates=week_dates, score=habit_score, verdict=verdict,
-                           chart_data=chart_data,
+                           heatmap_data=heatmap_data, # NEW DATA
                            today=date.today(), user=current_user)
 
-# --- API: SIMULATE WEEK END (UPDATED) ---
+# --- ROUTES FOR ARCHIVE & RESTORE ---
+@app.route('/archive')
+@login_required
+def archive():
+    tasks = Task.query.filter_by(user_id=current_user.id, is_archived=True).order_by(Task.id.desc()).all()
+    return render_template('archive.html', tasks=tasks, user=current_user)
+
+@app.route('/api/restore_task/<int:id>', methods=['POST'])
+@login_required
+def restore_task(id):
+    task = Task.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+    task.is_archived = False
+    db.session.commit()
+    return jsonify({'success': True})
+
+# --- API ---
 @app.route('/api/simulate_week_end', methods=['POST'])
 @login_required
 def simulate_week_end():
-    # 1. Фіксуємо статистику поточного моменту
     habit_score, tasks_done, tasks_total = calculate_current_stats(current_user)
     
     last_report = WeeklyReport.query.filter_by(user_id=current_user.id).order_by(WeeklyReport.created_at.desc()).first()
@@ -197,7 +245,6 @@ def simulate_week_end():
         if habit_score > last_report.habit_score: msg = "Better than last week! 🚀"
         elif habit_score < last_report.habit_score: msg = "A bit lower than before."
     
-    # 2. Зберігаємо звіт
     report = WeeklyReport(
         user_id=current_user.id,
         week_start_date=date.today() - timedelta(days=date.today().weekday()),
@@ -208,27 +255,20 @@ def simulate_week_end():
     )
     db.session.add(report)
     
-    # 3. Архівуємо виконані задачі
     completed_tasks = Task.query.filter_by(user_id=current_user.id, is_completed=True, is_archived=False).all()
     for task in completed_tasks: task.is_archived = True
         
-    # 4. ОЧИЩЕННЯ ТРЕКЕРА ЗВИЧОК (Скидання на нуль)
-    # Знаходимо всі логи звичок цього користувача за поточний тиждень і видаляємо їх
+    # Clear habits for current week to simulate reset
     start_of_week = date.today() - timedelta(days=date.today().weekday())
     user_habits = Habit.query.filter_by(user_id=current_user.id).all()
     habit_ids = [h.id for h in user_habits]
-    
     if habit_ids:
-        HabitLog.query.filter(
-            HabitLog.habit_id.in_(habit_ids), 
-            HabitLog.date >= start_of_week
-        ).delete(synchronize_session=False)
+        HabitLog.query.filter(HabitLog.habit_id.in_(habit_ids), HabitLog.date >= start_of_week).delete(synchronize_session=False)
 
     db.session.commit()
-    
     return jsonify({'success': True, 'report_msg': msg})
 
-# --- EXISTING CRUD ---
+# CRUD
 @app.route('/api/tasks', methods=['POST'])
 @login_required
 def add_task():
