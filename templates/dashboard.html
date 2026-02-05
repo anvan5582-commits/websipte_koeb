@@ -17,7 +17,6 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
         .task-transition { transition: all 0.3s ease; }
-        /* Анімація стовпчиків */
         .bar-grow { animation: growUp 1s ease-out forwards; transform-origin: bottom; transform: scaleY(0); }
         @keyframes growUp { to { transform: scaleY(1); } }
     </style>
@@ -36,11 +35,14 @@
                  <button onclick="simulateWeekEnd()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-2 rounded-lg shadow transition flex items-center gap-2" title="Simulate passing of time">
                     <i class="fas fa-forward"></i> End Week
                 </button>
+                
                 <a href="/logout" class="text-sm font-medium text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition mr-2 flex items-center gap-1"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                
                 <button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-white dark:bg-gray-700 shadow-sm border border-indigo-100 dark:border-gray-600 flex items-center justify-center text-gray-600 dark:text-yellow-400 hover:scale-110 transition-transform"><i class="fas fa-sun dark:hidden"></i><i class="fas fa-moon hidden dark:block"></i></button>
+                
                 <div class="bg-white dark:bg-gray-800 px-4 py-2 rounded-lg shadow-sm flex items-center gap-3 border border-indigo-100 dark:border-gray-700 transition-colors">
                     <div class="text-right">
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Weekly Status</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Habit Score</p>
                         <p id="global-verdict" class="font-bold text-green-600 dark:text-green-400 transition-all">{{ verdict }}</p>
                     </div>
                     <div id="global-score" class="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-600 dark:text-green-300 font-bold transition-all">{{ score }}%</div>
@@ -49,6 +51,7 @@
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
             <div class="lg:col-span-4 space-y-6">
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 relative transition-colors border border-transparent dark:border-gray-700">
                     <div class="flex justify-between items-center mb-4">
@@ -109,6 +112,7 @@
             </div>
 
             <div class="lg:col-span-8 space-y-6">
+                
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transition-colors border border-transparent dark:border-gray-700">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white"><i class="fas fa-fire text-orange-500"></i> Habit Tracker</h2>
@@ -146,27 +150,27 @@
 
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-transparent dark:border-gray-700">
                     <h3 class="text-lg font-bold mb-6 text-gray-800 dark:text-white flex items-center gap-2">
-                        <i class="fas fa-chart-bar text-purple-500"></i> Weekly Dynamics
+                        <i class="fas fa-chart-bar text-purple-500"></i> Weekly Habit Dynamics
                     </h3>
                     
-                    <div class="flex items-end justify-around h-48 gap-4 px-4">
+                    <div class="flex items-end justify-around h-48 gap-4 px-4 border-b border-gray-100 dark:border-gray-700 pb-2">
                         {% for data in chart_data %}
                         <div class="flex flex-col items-center w-1/3 group">
-                            <div class="mb-2 opacity-0 group-hover:opacity-100 transition text-xs bg-gray-900 text-white px-2 py-1 rounded">
-                                Tasks: {{ data.tasks }}
+                            <span class="mb-2 text-xs font-bold text-gray-800 dark:text-white drop-shadow-sm opacity-0 group-hover:opacity-100 transition duration-300 transform translate-y-2 group-hover:translate-y-0">
+                                {{ data.score }}%
+                            </span>
+                            
+                            <div class="w-full max-w-[60px] rounded-t-lg relative flex items-end justify-center bar-grow shadow-md {{ data.color }}" 
+                                 style="height: {{ data.score }}%; min-height: 6px;">
                             </div>
                             
-                            <div class="w-full max-w-[60px] rounded-t-lg relative flex items-end justify-center bar-grow {{ data.color }}" 
-                                 style="height: {{ data.score }}%; min-height: 4px;">
-                                <span class="mb-2 text-xs font-bold text-gray-800 dark:text-white drop-shadow-sm">{{ data.score }}%</span>
-                            </div>
-                            
-                            <div class="mt-3 text-xs font-medium text-gray-500 dark:text-gray-400 text-center uppercase tracking-wide">
+                            <div class="mt-3 text-[10px] md:text-xs font-medium text-gray-500 dark:text-gray-400 text-center uppercase tracking-wide">
                                 {{ data.label }}
                             </div>
                         </div>
                         {% endfor %}
                     </div>
+                    <p class="text-center text-xs text-gray-400 mt-4">Your habit consistency over time</p>
                 </div>
 
             </div>
@@ -198,14 +202,13 @@
     </div>
 
     <script>
-        // JS копія з попередньої версії (Theme, Tabs, AJAX, Modals, Simulate)
         function toggleTheme() { if (document.documentElement.classList.contains('dark')) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); } else { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } }
         (function() { const savedTheme = localStorage.getItem('theme'); if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); } })();
         function switchTaskTab(tab) { ['urgent', 'week', 'classes'].forEach(t => { const btn = document.getElementById(`tab-${t}`); if (t === tab) { btn.className = "flex-1 py-1.5 px-2 rounded-md bg-white dark:bg-gray-600 shadow-sm text-xs font-medium text-gray-800 dark:text-white transition-all"; } else { btn.className = "flex-1 py-1.5 px-2 rounded-md text-xs font-medium text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-all"; } }); const listView = document.getElementById('view-list'); const classView = document.getElementById('view-classes'); if (tab === 'classes') { listView.classList.add('hidden'); classView.classList.remove('hidden'); } else { listView.classList.remove('hidden'); classView.classList.add('hidden'); const items = listView.querySelectorAll('.task-item'); items.forEach(item => { const timing = item.dataset.timing; if (tab === 'urgent') { if (timing !== 'urgent') item.classList.add('hidden'); else item.classList.remove('hidden'); } else if (tab === 'week') { if (timing === 'urgent' || timing === 'this_week') item.classList.remove('hidden'); else item.classList.add('hidden'); } }); } }
         document.addEventListener('DOMContentLoaded', () => { switchTaskTab('week'); });
         async function toggleTask(id, checkbox) { fetch(`/api/toggle_task/${id}`, { method: 'POST' }); const card = document.getElementById(`task-card-${id}`); const title = document.getElementById(`task-title-${id}`); const isCompleted = checkbox.checked; if (isCompleted) { card.classList.add('opacity-60'); title.classList.add('line-through', 'text-gray-500', 'dark:text-gray-500'); title.classList.remove('text-gray-800', 'dark:text-gray-200'); card.classList.remove('border-l-red-500', 'border-l-orange-400', 'border-l-blue-300'); card.classList.add('border-l-gray-300', 'dark:border-l-gray-600'); } else { card.classList.remove('opacity-60'); title.classList.remove('line-through', 'text-gray-500', 'dark:text-gray-500'); title.classList.add('text-gray-800', 'dark:text-gray-200'); const timing = card.dataset.timing; card.classList.remove('border-l-gray-300', 'dark:border-l-gray-600'); if (timing === 'urgent') card.classList.add('border-l-red-500'); else if (timing === 'this_week') card.classList.add('border-l-orange-400'); else if (timing === 'next_week') card.classList.add('border-l-blue-300'); else card.classList.add('border-l-gray-300', 'dark:border-l-gray-600'); } }
         async function toggleHabit(habitId, dateStr) { const btn = document.getElementById(`btn-${habitId}-${dateStr}`); btn.style.transform = "scale(0.9)"; setTimeout(() => btn.style.transform = "scale(1)", 150); const response = await fetch('/api/toggle_habit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habit_id: habitId, date: dateStr }) }); const data = await response.json(); if (data.success) { btn.className = "w-8 h-8 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-all duration-200 shadow-sm"; btn.innerHTML = ""; if (data.status === 'done') { btn.classList.add('bg-green-500', 'text-white'); btn.innerHTML = '<i class="fas fa-check text-xs"></i>'; } else if (data.status === 'today') { btn.classList.add('border-2', 'border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20', 'text-blue-500'); btn.innerHTML = '<i class="fas fa-plus text-xs"></i>'; } else { btn.classList.add('border', 'border-gray-200', 'dark:border-gray-600', 'hover:bg-gray-200', 'dark:hover:bg-gray-600'); } const progElem = document.getElementById(`habit-progress-${habitId}`); if (progElem) { progElem.innerText = data.habit_progress + '%'; progElem.className = data.habit_progress === 100 ? "text-center font-bold text-green-500" : "text-center font-bold text-gray-700 dark:text-gray-300"; } document.getElementById('global-score').innerText = data.new_score + '%'; document.getElementById('global-verdict').innerText = data.new_verdict; } }
-        async function simulateWeekEnd() { if(!confirm("Simulate End of Week? \n\nThis will archive tasks and save stats.")) return; const response = await fetch('/api/simulate_week_end', { method: 'POST' }); const data = await response.json(); if(data.success) { alert(`Week ended!\nVerdict: ${data.report_msg}`); location.reload(); } }
+        async function simulateWeekEnd() { if(!confirm("Simulate End of Week? \n\nThis will:\n1. Save current stats to report.\n2. Archive all completed tasks.\n3. RESET habit tracker for the new week.")) return; const response = await fetch('/api/simulate_week_end', { method: 'POST' }); const data = await response.json(); if(data.success) { alert(`Week ended!\n\nVerdict: ${data.report_msg}\nHabit Tracker has been reset.`); location.reload(); } }
         function openTaskModal(id = null, title = '', category = '', timing = 'later') { document.getElementById('taskId').value = id || ''; document.getElementById('taskInputTitle').value = title; document.getElementById('taskInputCategory').value = category; document.getElementById('taskInputTiming').value = timing; document.getElementById('taskModalTitle').innerText = id ? 'Edit Task' : 'Add Task'; document.getElementById('taskModal').classList.remove('hidden'); }
         function closeTaskModal() { document.getElementById('taskModal').classList.add('hidden'); }
         async function saveTask() { const id = document.getElementById('taskId').value; const title = document.getElementById('taskInputTitle').value; const category = document.getElementById('taskInputCategory').value; const timing = document.getElementById('taskInputTiming').value; if (!title) return alert('Title is required'); const url = id ? `/api/tasks/${id}` : '/api/tasks'; const method = id ? 'PUT' : 'POST'; await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, category, timing }) }); location.reload(); }
