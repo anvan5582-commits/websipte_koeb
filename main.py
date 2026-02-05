@@ -58,6 +58,9 @@ class HabitLog(db.Model):
     date = db.Column(db.Date, nullable=False)
     status = db.Column(db.Boolean, default=True)
 
+with app.app_context():
+    db.create_all()
+
 # --- AUTH & HELPERS ---
 
 @login_manager.user_loader
