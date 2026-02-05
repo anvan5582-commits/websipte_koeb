@@ -121,12 +121,13 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    # Tasks & Habits Logic (Same as before)
+    # --- TASKS ---
     tasks = Task.query.filter_by(user_id=current_user.id, is_archived=False).all()
     timing_order = {'urgent': 0, 'this_week': 1, 'next_week': 2, 'later': 3}
     tasks.sort(key=lambda t: (t.is_completed, timing_order.get(t.timing, 3)))
     categories = sorted(list(set([t.category for t in tasks if t.category])))
     
+    # --- HABITS ---
     habits = Habit.query.filter_by(user_id=current_user.id).all()
     week_dates = get_week_dates()
     habit_grid = []
@@ -141,73 +142,62 @@ def index():
         progress = int((completed_count / 7) * 100)
         habit_grid.append({'obj': habit, 'days': days_status, 'progress': progress})
 
-    # Stats Logic
+    # --- STATS ---
     habit_score, tasks_done, tasks_total = calculate_current_stats(current_user)
     verdict = "Normal"
     if habit_score > 85: verdict = "Legendary! 🔥"
     elif habit_score > 50: verdict = "Stable 👍"
     else: verdict = "Needs Focus 😬"
 
-    # --- Отримуємо звіти за ОСТАННІ 2 ТИЖНІ ---
-    # Беремо 2 останні записи, сортуємо від нових до старих
+    # --- CHART DATA (Last 2 Reports + Current) ---
     past_reports = WeeklyReport.query.filter_by(user_id=current_user.id)\
-        .order_by(WeeklyReport.created_at.desc())\
-        .limit(2).all()
+        .order_by(WeeklyReport.created_at.desc()).limit(2).all()
     
-    # Формуємо дані для графіка (Current + Last + Before Last)
-    # Структура: [BeforeLast, Last, Current] (зліва направо по часу)
+    # Sort: [Oldest, Newer] for chart left-to-right logic
+    past_reports.reverse() 
     
     chart_data = []
     
-    # 1. Позаминулий (якщо є)
-    if len(past_reports) == 2:
-        r = past_reports[1]
+    # Add historic data if available
+    for i, r in enumerate(past_reports):
+        label = "2 Weeks Ago" if i == 0 and len(past_reports) == 2 else "Last Week"
         chart_data.append({
-            'label': '2 Weeks Ago',
+            'label': label,
             'score': r.habit_score,
-            'tasks': f"{r.tasks_done}/{r.tasks_total}",
             'color': 'bg-gray-300 dark:bg-gray-600'
         })
-    else:
-        chart_data.append({'label': '2 Weeks Ago', 'score': 0, 'tasks': '-', 'color': 'bg-gray-200 dark:bg-gray-700 opacity-50'})
 
-    # 2. Минулий (якщо є)
-    if len(past_reports) >= 1:
-        r = past_reports[0]
-        chart_data.append({
-            'label': 'Last Week',
-            'score': r.habit_score,
-            'tasks': f"{r.tasks_done}/{r.tasks_total}",
-            'color': 'bg-blue-400'
-        })
-    else:
-        chart_data.append({'label': 'Last Week', 'score': 0, 'tasks': '-', 'color': 'bg-gray-200 dark:bg-gray-700 opacity-50'})
+    # If no history, add empty placeholder for visual balance
+    if not chart_data:
+        chart_data.append({'label': 'Last Week', 'score': 0, 'color': 'bg-gray-200 dark:bg-gray-700 opacity-30'})
 
-    # 3. Поточний (Завжди є "на льоту")
+    # Add Current Week
     chart_data.append({
         'label': 'This Week',
         'score': habit_score,
-        'tasks': f"{tasks_done}/{tasks_total}",
-        'color': 'bg-green-500' # Яскравий, бо це зараз
+        'color': 'bg-green-500'
     })
 
     return render_template('dashboard.html', 
                            tasks=tasks, categories=categories, habits=habit_grid, 
                            week_dates=week_dates, score=habit_score, verdict=verdict,
-                           chart_data=chart_data, # Передаємо дані для графіка
+                           chart_data=chart_data,
                            today=date.today(), user=current_user)
 
-# --- API ---
+# --- API: SIMULATE WEEK END (UPDATED) ---
 @app.route('/api/simulate_week_end', methods=['POST'])
 @login_required
 def simulate_week_end():
+    # 1. Фіксуємо статистику поточного моменту
     habit_score, tasks_done, tasks_total = calculate_current_stats(current_user)
+    
     last_report = WeeklyReport.query.filter_by(user_id=current_user.id).order_by(WeeklyReport.created_at.desc()).first()
     msg = "Good job!"
     if last_report:
-        if habit_score > last_report.habit_score: msg = "Improved since last week!"
+        if habit_score > last_report.habit_score: msg = "Better than last week! 🚀"
         elif habit_score < last_report.habit_score: msg = "A bit lower than before."
     
+    # 2. Зберігаємо звіт
     report = WeeklyReport(
         user_id=current_user.id,
         week_start_date=date.today() - timedelta(days=date.today().weekday()),
@@ -218,14 +208,27 @@ def simulate_week_end():
     )
     db.session.add(report)
     
+    # 3. Архівуємо виконані задачі
     completed_tasks = Task.query.filter_by(user_id=current_user.id, is_completed=True, is_archived=False).all()
-    count_archived = len(completed_tasks)
     for task in completed_tasks: task.is_archived = True
         
-    db.session.commit()
-    return jsonify({'success': True, 'archived_count': count_archived, 'report_msg': msg})
+    # 4. ОЧИЩЕННЯ ТРЕКЕРА ЗВИЧОК (Скидання на нуль)
+    # Знаходимо всі логи звичок цього користувача за поточний тиждень і видаляємо їх
+    start_of_week = date.today() - timedelta(days=date.today().weekday())
+    user_habits = Habit.query.filter_by(user_id=current_user.id).all()
+    habit_ids = [h.id for h in user_habits]
+    
+    if habit_ids:
+        HabitLog.query.filter(
+            HabitLog.habit_id.in_(habit_ids), 
+            HabitLog.date >= start_of_week
+        ).delete(synchronize_session=False)
 
-# CRUD (Task/Habit/Toggle) - БЕЗ ЗМІН (як в попередньому коді)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'report_msg': msg})
+
+# --- EXISTING CRUD ---
 @app.route('/api/tasks', methods=['POST'])
 @login_required
 def add_task():
