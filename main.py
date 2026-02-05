@@ -8,16 +8,23 @@ from datetime import datetime, timedelta, date
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
-# Секретний ключ (береться з Environment Variables або дефолтний для тесту)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-change-this-in-prod')
 
-# База даних: Якщо є DATABASE_URL (Koyeb/Heroku), юзаємо її. Якщо ні — локальний файл.
+# Отримуємо URL бази
 database_url = os.environ.get('DATABASE_URL')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///regis_life.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# === ВАЖЛИВЕ ВИПРАВЛЕННЯ ДЛЯ KOYEB ===
+# Це лікує проблему "працює з 3-го разу".
+# pool_pre_ping=True змушує сервер перевіряти з'єднання перед кожним запитом.
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -39,9 +46,9 @@ class User(UserMixin, db.Model):
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
+    # ЗМІНЕНО: db.Text замість String(100), щоб писати довгі тексти
+    title = db.Column(db.Text, nullable=False) 
     category = db.Column(db.String(50))
-    # timing values: 'urgent', 'this_week', 'next_week', 'later'
     timing = db.Column(db.String(20), default='later') 
     is_completed = db.Column(db.Boolean, default=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -49,7 +56,8 @@ class Task(db.Model):
 class Habit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(200))
+    # ЗМІНЕНО: db.Text для описів
+    description = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 class HabitLog(db.Model):
@@ -58,14 +66,15 @@ class HabitLog(db.Model):
     date = db.Column(db.Date, nullable=False)
     status = db.Column(db.Boolean, default=True)
 
-with app.app_context():
-    db.create_all()
-
 # --- AUTH & HELPERS ---
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+# Створення таблиць при запуску (важливо для Koyeb)
+with app.app_context():
+    db.create_all()
 
 def get_week_dates():
     today = date.today()
@@ -98,6 +107,11 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        # Перевірка довжини
+        if len(username) > 99:
+            flash('Username too long')
+            return redirect(url_for('register'))
+            
         if User.query.filter_by(username=username).first():
             flash('Username already exists')
             return redirect(url_for('register'))
@@ -129,15 +143,12 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    # Tasks
     tasks = Task.query.filter_by(user_id=current_user.id).all()
-    # Sort: Urgent(0) > ThisWeek(1) > Next(2) > Later(3). Completed at bottom.
     timing_order = {'urgent': 0, 'this_week': 1, 'next_week': 2, 'later': 3}
     tasks.sort(key=lambda t: (t.is_completed, timing_order.get(t.timing, 3)))
     
     categories = sorted(list(set([t.category for t in tasks if t.category])))
     
-    # Habits
     habits = Habit.query.filter_by(user_id=current_user.id).all()
     week_dates = get_week_dates()
     habit_grid = []
@@ -167,6 +178,7 @@ def index():
 @login_required
 def add_task():
     data = request.json
+    # Тепер можна писати довгі тексти (db.Text)
     new_task = Task(title=data.get('title'), category=data.get('category'), 
                     timing=data.get('timing', 'later'), user_id=current_user.id)
     db.session.add(new_task)
