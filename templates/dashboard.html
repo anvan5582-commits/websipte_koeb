@@ -18,27 +18,35 @@
         body { font-family: 'Inter', sans-serif; }
         .fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
         
-        /* Плавні переходи для чеклиста */
+        /* Smooth transitions */
         .task-transition { transition: all 0.3s ease; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 min-h-screen text-gray-800 dark:text-gray-100 p-4 md:p-8 transition-colors duration-300">
 
     <div class="max-w-7xl mx-auto relative">
-        <header class="flex justify-between items-center mb-8">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
                     <i class="fas fa-layer-group text-blue-500"></i> Dashboard
                 </h1>
-                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Personal Control Center</p>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                    Welcome, <span class="font-bold text-indigo-500">{{ user.username }}</span>
+                </p>
             </div>
             
             <div class="flex items-center gap-4">
+                <a href="/logout" class="text-sm font-medium text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition mr-2 flex items-center gap-1">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+
                 <button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-white dark:bg-gray-700 shadow-sm border border-indigo-100 dark:border-gray-600 flex items-center justify-center text-gray-600 dark:text-yellow-400 hover:scale-110 transition-transform">
                     <i class="fas fa-sun dark:hidden"></i>
                     <i class="fas fa-moon hidden dark:block"></i>
@@ -271,6 +279,7 @@
     </div>
 
     <script>
+        // --- THEME & INIT ---
         function toggleTheme() {
             if (document.documentElement.classList.contains('dark')) {
                 document.documentElement.classList.remove('dark');
@@ -280,7 +289,6 @@
                 localStorage.setItem('theme', 'dark');
             }
         }
-
         (function() {
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -290,6 +298,7 @@
             }
         })();
 
+        // --- TABS ---
         function switchTaskTab(tab) {
             ['urgent', 'week', 'classes'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
@@ -323,41 +332,30 @@
                 });
             }
         }
-
         document.addEventListener('DOMContentLoaded', () => { switchTaskTab('week'); });
 
-        // --- TASK LOGIC (NO RELOAD) ---
-        
+        // --- TASKS (AJAX) ---
         async function toggleTask(id, checkbox) {
-            // 1. Send request silently
-            fetch(`/api/toggle_task/${id}`, { method: 'POST' });
-
-            // 2. Update UI instantly
+            fetch(`/api/toggle_task/${id}`, { method: 'POST' }); // Send silently
+            
             const card = document.getElementById(`task-card-${id}`);
             const title = document.getElementById(`task-title-${id}`);
-            
             const isCompleted = checkbox.checked;
 
             if (isCompleted) {
-                // Dim the card
                 card.classList.add('opacity-60');
-                // Cross out text
                 title.classList.add('line-through', 'text-gray-500', 'dark:text-gray-500');
                 title.classList.remove('text-gray-800', 'dark:text-gray-200');
-                // Remove colored border (make it gray)
                 card.classList.remove('border-l-red-500', 'border-l-orange-400', 'border-l-blue-300');
                 card.classList.add('border-l-gray-300', 'dark:border-l-gray-600');
             } else {
-                // Restore card
                 card.classList.remove('opacity-60');
-                // Restore text
                 title.classList.remove('line-through', 'text-gray-500', 'dark:text-gray-500');
                 title.classList.add('text-gray-800', 'dark:text-gray-200');
                 
-                // Restore original border color based on timing data
+                // Restore color
                 const timing = card.dataset.timing;
                 card.classList.remove('border-l-gray-300', 'dark:border-l-gray-600');
-                
                 if (timing === 'urgent') card.classList.add('border-l-red-500');
                 else if (timing === 'this_week') card.classList.add('border-l-orange-400');
                 else if (timing === 'next_week') card.classList.add('border-l-blue-300');
@@ -365,16 +363,12 @@
             }
         }
 
-        // --- HABIT LOGIC (NO RELOAD) ---
-
+        // --- HABITS (AJAX) ---
         async function toggleHabit(habitId, dateStr) {
             const btn = document.getElementById(`btn-${habitId}-${dateStr}`);
-            
-            // Animation press
             btn.style.transform = "scale(0.9)";
             setTimeout(() => btn.style.transform = "scale(1)", 150);
 
-            // Fetch
             const response = await fetch('/api/toggle_habit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -383,46 +377,31 @@
             const data = await response.json();
 
             if (data.success) {
-                // Update Button Style directly
-                updateHabitBtnStyle(btn, data.status);
-
-                // Update Progress Text for this habit
-                const progressText = document.getElementById(`habit-progress-${habitId}`);
-                if(progressText) {
-                    progressText.innerText = data.habit_progress + '%';
-                    if (data.habit_progress === 100) {
-                        progressText.className = "text-center font-bold text-green-500";
-                    } else {
-                        progressText.className = "text-center font-bold text-gray-700 dark:text-gray-300";
-                    }
+                // Update Button Visuals
+                btn.className = "w-8 h-8 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-all duration-200 shadow-sm";
+                btn.innerHTML = "";
+                if (data.status === 'done') {
+                    btn.classList.add('bg-green-500', 'text-white');
+                    btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
+                } else if (data.status === 'today') {
+                    btn.classList.add('border-2', 'border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20', 'text-blue-500');
+                    btn.innerHTML = '<i class="fas fa-plus text-xs"></i>';
+                } else {
+                    btn.classList.add('border', 'border-gray-200', 'dark:border-gray-600', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
                 }
 
-                // Update Global Stats
+                // Update Stats
+                const progElem = document.getElementById(`habit-progress-${habitId}`);
+                if (progElem) {
+                    progElem.innerText = data.habit_progress + '%';
+                    progElem.className = data.habit_progress === 100 ? "text-center font-bold text-green-500" : "text-center font-bold text-gray-700 dark:text-gray-300";
+                }
                 document.getElementById('global-score').innerText = data.new_score + '%';
                 document.getElementById('global-verdict').innerText = data.new_verdict;
             }
         }
 
-        function updateHabitBtnStyle(btn, status) {
-            // Reset base classes
-            btn.className = "w-8 h-8 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-all duration-200 shadow-sm";
-            btn.innerHTML = ""; // clear icon
-
-            if (status === 'done') {
-                btn.classList.add('bg-green-500', 'text-white');
-                btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
-            } else if (status === 'today') {
-                btn.classList.add('border-2', 'border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20', 'text-blue-500');
-                btn.innerHTML = '<i class="fas fa-plus text-xs"></i>';
-            } else {
-                // Missed or empty
-                btn.classList.add('border', 'border-gray-200', 'dark:border-gray-600', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
-            }
-        }
-
-
-        // --- CRUD (These still reload, which is fine for adding/deleting) ---
-
+        // --- CRUD MODALS (Reloads Page) ---
         function openTaskModal(id = null, title = '', category = '', timing = 'later') {
             document.getElementById('taskId').value = id || '';
             document.getElementById('taskInputTitle').value = title;
@@ -431,9 +410,8 @@
             document.getElementById('taskModalTitle').innerText = id ? 'Edit Task' : 'Add Task';
             document.getElementById('taskModal').classList.remove('hidden');
         }
-
         function closeTaskModal() { document.getElementById('taskModal').classList.add('hidden'); }
-
+        
         async function saveTask() {
             const id = document.getElementById('taskId').value;
             const title = document.getElementById('taskInputTitle').value;
@@ -457,7 +435,6 @@
             document.getElementById('habitModalTitle').innerText = id ? 'Edit Habit' : 'Add Habit';
             document.getElementById('habitModal').classList.remove('hidden');
         }
-
         function closeHabitModal() { document.getElementById('habitModal').classList.add('hidden'); }
 
         async function saveHabit() {
