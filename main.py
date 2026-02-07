@@ -58,14 +58,10 @@ class WeeklyReport(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     week_start_date = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
     habit_score = db.Column(db.Integer, default=0)
     tasks_done = db.Column(db.Integer, default=0)
     tasks_total = db.Column(db.Integer, default=0)
     motivation_msg = db.Column(db.String(200))
-    
-    # НОВЕ: Зберігаємо "знімок" сітки звичок як JSON рядок
-    # Це гарантує, що історія ніколи не зламається, навіть якщо видалити звички
     grid_snapshot = db.Column(db.Text, default="[]") 
 
 # --- HELPERS ---
@@ -94,12 +90,10 @@ def calculate_current_stats(user):
     tasks_done = len([t for t in tasks_all if t.is_completed])
     return habit_score, tasks_done, tasks_total
 
-# Генерує живі дані для поточного тижня
 def get_live_weekly_grid(user):
     today = date.today()
     start_date = today - timedelta(days=today.weekday())
     user_habits = Habit.query.filter_by(user_id=user.id).all()
-    
     grid_rows = []
     total_checks = 0
     total_slots = len(user_habits) * 7 if user_habits else 1
@@ -114,11 +108,9 @@ def get_live_weekly_grid(user):
         grid_rows.append({'name': habit.name, 'days': days_status})
 
     week_score = int((total_checks / total_slots) * 100)
-    
-    mood, trend = 'sad', 'down' # Trend вираховується пізніше у порівнянні
+    mood = 'sad'
     if week_score >= 80: mood = 'wow'
     elif week_score >= 40: mood = 'ok'
-
     return {'rows': grid_rows, 'score': week_score, 'mood': mood}
 
 # --- ROUTES ---
@@ -152,13 +144,11 @@ def logout(): logout_user(); return redirect(url_for('login'))
 @app.route('/')
 @login_required
 def index():
-    # --- TASKS ---
     tasks = Task.query.filter_by(user_id=current_user.id, is_archived=False).all()
     timing_order = {'urgent': 0, 'this_week': 1, 'next_week': 2, 'later': 3}
     tasks.sort(key=lambda t: (t.is_completed, timing_order.get(t.timing, 3)))
     categories = sorted(list(set([t.category for t in tasks if t.category])))
     
-    # --- HABITS TRACKER (Live View) ---
     habits = Habit.query.filter_by(user_id=current_user.id).all()
     week_dates = get_week_dates()
     habit_grid = []
@@ -180,43 +170,26 @@ def index():
     elif habit_score > 50: verdict = "Stable 👍"
     else: verdict = "Needs Focus 😬"
 
-    # --- HISTORY / HEATMAP DATA (Using Snapshots) ---
-    
-    # 1. Отримуємо збережені звіти
+    # --- HISTORY SNAPSHOTS ---
     past_reports = WeeklyReport.query.filter_by(user_id=current_user.id)\
         .order_by(WeeklyReport.created_at.desc()).limit(2).all()
-    past_reports.reverse() # [Oldest, Newer]
+    past_reports.reverse() 
 
     heatmap_data = []
-
-    # 2. Відновлюємо дані з JSON (Це "2 Weeks Ago" і "Last Week")
     for r in past_reports:
-        try:
-            grid_rows = json.loads(r.grid_snapshot)
-        except:
-            grid_rows = []
-        
+        try: grid_rows = json.loads(r.grid_snapshot)
+        except: grid_rows = []
         mood = 'sad'
         if r.habit_score >= 80: mood = 'wow'
         elif r.habit_score >= 40: mood = 'ok'
-            
-        heatmap_data.append({
-            'label': 'Past Week', # Placeholder
-            'score': r.habit_score,
-            'rows': grid_rows,
-            'mood': mood,
-            'trend': 'flat' # Placeholder
-        })
+        heatmap_data.append({'label': 'Past', 'score': r.habit_score, 'rows': grid_rows, 'mood': mood, 'trend': 'flat'})
     
-    # Заповнюємо пустишками, якщо історії немає
     while len(heatmap_data) < 2:
         heatmap_data.insert(0, {'label': 'No Data', 'score': 0, 'rows': [], 'mood': 'sad', 'trend': 'flat'})
 
-    # Проставляємо правильні лейбли
     heatmap_data[0]['label'] = '2 Weeks Ago'
     heatmap_data[1]['label'] = 'Last Week'
 
-    # 3. Додаємо ПОТОЧНИЙ тиждень (Live Data)
     live_data = get_live_weekly_grid(current_user)
     heatmap_data.append({
         'label': 'This Week',
@@ -226,18 +199,13 @@ def index():
         'trend': 'flat'
     })
 
-    # 4. Обрахунок Трендів (Порівняння)
     for i in range(1, 3):
         prev = heatmap_data[i-1]['score']
         curr = heatmap_data[i]['score']
         diff = curr - prev
-        
         if diff >= 5: heatmap_data[i]['trend'] = 'up'
         elif diff <= -5: heatmap_data[i]['trend'] = 'down'
         else: heatmap_data[i]['trend'] = 'flat'
-        
-        # Оновлюємо настрій на основі тренду, якщо хочеш, 
-        # АЛЕ ти просив настрій на основі балів. Залишимо настрій від балів, а стрілку від тренду.
 
     return render_template('dashboard.html', 
                            tasks=tasks, categories=categories, habits=habit_grid, 
@@ -266,21 +234,17 @@ def restore_task(id):
 @app.route('/api/simulate_week_end', methods=['POST'])
 @login_required
 def simulate_week_end():
-    # 1. Рахуємо статистику
     current_grid_data = get_live_weekly_grid(current_user)
     habit_score = current_grid_data['score']
     tasks_done = Task.query.filter_by(user_id=current_user.id, is_archived=False, is_completed=True).count()
     tasks_total = Task.query.filter_by(user_id=current_user.id, is_archived=False).count()
 
-    # 2. Порівняння для повідомлення
     last_report = WeeklyReport.query.filter_by(user_id=current_user.id).order_by(WeeklyReport.created_at.desc()).first()
     msg = "Good job!"
     if last_report:
         if habit_score > last_report.habit_score: msg = "Better than last week! 🚀"
         elif habit_score < last_report.habit_score: msg = "A bit lower than before."
 
-    # 3. СТВОРЮЄМО ЗНІМОК (SNAPSHOT)
-    # Перетворюємо rows (список словників) в JSON рядок
     grid_json = json.dumps(current_grid_data['rows'])
 
     report = WeeklyReport(
@@ -290,26 +254,20 @@ def simulate_week_end():
         tasks_done=tasks_done,
         tasks_total=tasks_total,
         motivation_msg=msg,
-        grid_snapshot=grid_json # <--- ЗБЕРІГАЄМО ІСТОРІЮ ТУТ
+        grid_snapshot=grid_json 
     )
     db.session.add(report)
     
-    # 4. Архівуємо задачі
     completed_tasks = Task.query.filter_by(user_id=current_user.id, is_completed=True, is_archived=False).all()
     for task in completed_tasks: 
         task.is_archived = True
         task.archived_at = date.today()
         
-    # 5. ОЧИЩАЄМО ТРЕКЕР (Reset)
-    # Тепер ми можемо сміливо видаляти логи, бо копія збережена в grid_snapshot
     start_of_week = date.today() - timedelta(days=date.today().weekday())
     user_habits = Habit.query.filter_by(user_id=current_user.id).all()
     habit_ids = [h.id for h in user_habits]
     if habit_ids:
-        HabitLog.query.filter(
-            HabitLog.habit_id.in_(habit_ids), 
-            HabitLog.date >= start_of_week
-        ).delete(synchronize_session=False)
+        HabitLog.query.filter(HabitLog.habit_id.in_(habit_ids), HabitLog.date >= start_of_week).delete(synchronize_session=False)
 
     db.session.commit()
     return jsonify({'success': True, 'report_msg': msg})
@@ -333,7 +291,9 @@ def delete_task(id):
 def edit_task(id):
     task = Task.query.filter_by(id=id, user_id=current_user.id).first_or_404()
     data = request.json
-    task.title=data.get('title'); task.category=data.get('category'); task.timing=data.get('timing')
+    task.title=data.get('title', task.title)
+    task.category=data.get('category', task.category)
+    task.timing=data.get('timing', task.timing)
     db.session.commit()
     return jsonify({'success': True})
 @app.route('/api/toggle_task/<int:task_id>', methods=['POST'])
@@ -347,9 +307,22 @@ def toggle_task(task_id):
 @login_required
 def add_habit():
     data = request.json
+    # FIX: use 'description' to match frontend request
     new_habit = Habit(name=data.get('name'), description=data.get('description'), user_id=current_user.id)
     db.session.add(new_habit); db.session.commit()
     return jsonify({'success': True})
+
+# --- НОВИЙ МАРШРУТ: РЕДАГУВАННЯ ЗВИЧКИ ---
+@app.route('/api/habits/<int:id>', methods=['PUT'])
+@login_required
+def edit_habit(id):
+    habit = Habit.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+    data = request.json
+    habit.name = data.get('name', habit.name)
+    habit.description = data.get('description', habit.description)
+    db.session.commit()
+    return jsonify({'success': True})
+
 @app.route('/api/habits/<int:id>', methods=['DELETE'])
 @login_required
 def delete_habit(id):
