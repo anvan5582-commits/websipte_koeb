@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archive - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        .modal-enter { animation: modalIn 0.2s ease-out forwards; }
+        .modal-leave { animation: modalOut 0.2s ease-in forwards; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes modalOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-100 p-4 md:p-8 transition-colors duration-300">
+
+    <div class="max-w-4xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold flex items-center gap-3 dark:text-white">
+                <i class="fas fa-box-open text-yellow-500"></i> Archive
+            </h1>
+            <a href="/" class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition flex items-center gap-2 shadow-sm">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+
+        {% if grouped_tasks|length == 0 %}
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-10 border border-gray-100 dark:border-gray-700 text-center text-gray-400">
+                <i class="fas fa-ghost text-4xl mb-3"></i>
+                <p>Archive is empty.</p>
+            </div>
+        {% else %}
+            <div class="space-y-8">
+                {% for date_label, tasks in grouped_tasks.items() %}
+                <div class="animate-fade-in">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="h-px bg-gray-300 dark:bg-gray-700 flex-1"></div>
+                        <span class="text-xs font-bold uppercase text-gray-400 tracking-wider bg-gray-50 dark:bg-gray-900 px-2">
+                            Week Ending: {{ date_label }}
+                        </span>
+                        <div class="h-px bg-gray-300 dark:bg-gray-700 flex-1"></div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                        {% for task in tasks %}
+                        <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-750 transition group">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-check-circle text-green-500 text-xs"></i>
+                                    <p class="font-medium text-gray-600 dark:text-gray-300 line-through decoration-gray-400">{{ task.title }}</p>
+                                </div>
+                                <span class="text-[10px] text-gray-400 uppercase tracking-wide ml-5">{{ task.category }}</span>
+                            </div>
+                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                                <button onclick="confirmRestoreTask({{ task.id }})" title="Restore" class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 flex items-center justify-center transition">
+                                    <i class="fas fa-undo-alt text-xs"></i>
+                                </button>
+                                <button onclick="confirmDeleteTask({{ task.id }})" title="Delete" class="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 flex items-center justify-center transition">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div id="confirmModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 transform transition-all scale-95 opacity-0 modal-enter border dark:border-gray-700">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900 mb-4">
+                    <i class="fas fa-question text-indigo-600 dark:text-indigo-400 text-lg"></i>
+                </div>
+                <h3 class="text-lg leading-6 font-bold text-gray-900 dark:text-white" id="confirmTitle">Confirm Action</h3>
+                <div class="mt-2"><p class="text-sm text-gray-500 dark:text-gray-400" id="confirmMessage">Are you sure?</p></div>
+            </div>
+            <div class="mt-6 flex gap-3">
+                <button onclick="closeConfirmModal()" class="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 font-medium transition">Cancel</button>
+                <button id="confirmYesBtn" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-lg shadow-indigo-500/30 transition">Yes, do it</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() { const savedTheme = localStorage.getItem('theme'); if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); } })();
+        function showConfirm(title, msg, onConfirm) { document.getElementById('confirmTitle').innerText = title; document.getElementById('confirmMessage').innerText = msg; const btn = document.getElementById('confirmYesBtn'); const newBtn = btn.cloneNode(true); btn.parentNode.replaceChild(newBtn, btn); newBtn.addEventListener('click', async () => { closeConfirmModal(); await onConfirm(); }); document.getElementById('confirmModal').classList.remove('hidden'); document.querySelector('#confirmModal > div').classList.remove('modal-leave'); document.querySelector('#confirmModal > div').classList.add('modal-enter'); }
+        function closeConfirmModal() { const modalContent = document.querySelector('#confirmModal > div'); modalContent.classList.remove('modal-enter'); modalContent.classList.add('modal-leave'); setTimeout(() => { document.getElementById('confirmModal').classList.add('hidden'); }, 200); }
+        function confirmRestoreTask(id) { showConfirm("Restore Task?", "Move back to dashboard?", async () => { const res = await fetch(`/api/restore_task/${id}`, { method: 'POST' }); if(res.ok) location.reload(); }); }
+        function confirmDeleteTask(id) { showConfirm("Delete Forever?", "Cannot be undone.", async () => { const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' }); if(res.ok) location.reload(); }); }
+    </script>
+</body>
+</html>
