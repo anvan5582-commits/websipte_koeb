@@ -31,7 +31,8 @@
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 min-h-screen text-gray-800 dark:text-gray-100 p-4 md:p-8 transition-colors duration-300">
 
-    <div class="max-w-[1600px] mx-auto relative"> <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+    <div class="max-w-[1600px] mx-auto relative">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
                     <i class="fas fa-layer-group text-blue-500"></i> Dashboard
@@ -256,9 +257,7 @@
                     <i class="fas fa-question text-indigo-600 dark:text-indigo-400 text-lg"></i>
                 </div>
                 <h3 class="text-lg leading-6 font-bold text-gray-900 dark:text-white" id="confirmTitle">Confirm Action</h3>
-                <div class="mt-2">
-                    <p class="text-sm text-gray-500 dark:text-gray-400" id="confirmMessage">Are you sure?</p>
-                </div>
+                <div class="mt-2"><p class="text-sm text-gray-500 dark:text-gray-400" id="confirmMessage">Are you sure?</p></div>
             </div>
             <div class="mt-6 flex gap-3">
                 <button onclick="closeConfirmModal()" class="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 font-medium transition">Cancel</button>
@@ -274,13 +273,9 @@
                     <i class="fas fa-check text-green-600 dark:text-green-400 text-lg"></i>
                 </div>
                 <h3 class="text-lg leading-6 font-bold text-gray-900 dark:text-white" id="alertTitle">Success</h3>
-                <div class="mt-2">
-                    <p class="text-sm text-gray-500 dark:text-gray-400 whitespace-pre-line" id="alertMessage">Action completed.</p>
-                </div>
+                <div class="mt-2"><p class="text-sm text-gray-500 dark:text-gray-400 whitespace-pre-line" id="alertMessage">Action completed.</p></div>
             </div>
-            <div class="mt-6">
-                <button onclick="closeAlertModal()" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium shadow-lg shadow-green-500/30 transition">Awesome</button>
-            </div>
+            <div class="mt-6"><button onclick="closeAlertModal()" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium shadow-lg shadow-green-500/30 transition">Awesome</button></div>
         </div>
     </div>
 
@@ -290,12 +285,23 @@
             <input type="hidden" id="taskId">
             <div class="space-y-4">
                 <div><label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label><input type="text" id="taskInputTitle" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-gray-700 dark:text-white"></div>
-                <div><label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Class / Category</label><input type="text" id="taskInputCategory" placeholder="e.g. Work, Home" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-gray-700 dark:text-white"></div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Class / Category</label>
+                    <input list="category-list" type="text" id="taskInputCategory" placeholder="e.g. Work, Home" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-gray-700 dark:text-white">
+                    <datalist id="category-list">
+                        {% for cat in categories %}
+                        <option value="{{ cat }}">
+                        {% endfor %}
+                    </datalist>
+                </div>
+
                 <div><label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timing / Urgency</label><select id="taskInputTiming" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-700 dark:text-white"><option value="urgent">🔥 Urgent</option><option value="this_week">📅 This Week</option><option value="next_week">🔜 Next Week</option><option value="later">💤 Not Urgent</option></select></div>
                 <div class="flex justify-end gap-3 mt-6"><button onclick="closeTaskModal()" class="px-4 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button><button onclick="saveTask()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button></div>
             </div>
         </div>
     </div>
+
     <div id="habitModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50 backdrop-blur-sm">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 border dark:border-gray-700">
             <h3 id="habitModalTitle" class="text-xl font-bold mb-4 dark:text-white">Add Habit</h3>
@@ -309,37 +315,14 @@
     </div>
 
     <script>
-        // --- MODAL LOGIC ---
-        function showConfirm(title, msg, onConfirm) {
-            document.getElementById('confirmTitle').innerText = title;
-            document.getElementById('confirmMessage').innerText = msg;
-            const btn = document.getElementById('confirmYesBtn');
-            const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
-            newBtn.addEventListener('click', async () => { closeConfirmModal(); await onConfirm(); });
-            document.getElementById('confirmModal').classList.remove('hidden');
-        }
+        // ... (MODAL LOGIC & ACTIONS SAME AS BEFORE) ...
+        function showConfirm(title, msg, onConfirm) { document.getElementById('confirmTitle').innerText = title; document.getElementById('confirmMessage').innerText = msg; const btn = document.getElementById('confirmYesBtn'); const newBtn = btn.cloneNode(true); btn.parentNode.replaceChild(newBtn, btn); newBtn.addEventListener('click', async () => { closeConfirmModal(); await onConfirm(); }); document.getElementById('confirmModal').classList.remove('hidden'); }
         function closeConfirmModal() { document.getElementById('confirmModal').classList.add('hidden'); }
-        function showAlert(title, msg, reload = false) {
-            document.getElementById('alertTitle').innerText = title;
-            document.getElementById('alertMessage').innerText = msg;
-            document.getElementById('alertModal').classList.remove('hidden');
-            if (reload) { document.querySelector('#alertModal button').onclick = () => location.reload(); } 
-            else { document.querySelector('#alertModal button').onclick = closeAlertModal; }
-        }
+        function showAlert(title, msg, reload = false) { document.getElementById('alertTitle').innerText = title; document.getElementById('alertMessage').innerText = msg; document.getElementById('alertModal').classList.remove('hidden'); if (reload) { document.querySelector('#alertModal button').onclick = () => location.reload(); } else { document.querySelector('#alertModal button').onclick = closeAlertModal; } }
         function closeAlertModal() { document.getElementById('alertModal').classList.add('hidden'); }
-
-        async function confirmWeekEnd() {
-            showConfirm("Simulate End of Week?", "This will save history, archive tasks, and RESET the habit tracker.", async () => {
-                const response = await fetch('/api/simulate_week_end', { method: 'POST' });
-                const data = await response.json();
-                if(data.success) showAlert("Week Ended!", `Verdict: ${data.report_msg}\nHabit Tracker has been reset.`, true);
-            });
-        }
+        async function confirmWeekEnd() { showConfirm("Simulate End of Week?", "This will save history, archive tasks, and RESET the habit tracker.", async () => { const response = await fetch('/api/simulate_week_end', { method: 'POST' }); const data = await response.json(); if(data.success) showAlert("Week Ended!", `Verdict: ${data.report_msg}\nHabit Tracker has been reset.`, true); }); }
         function confirmDeleteTask(id) { showConfirm("Delete Task?", "Are you sure?", async () => { await fetch(`/api/tasks/${id}`, { method: 'DELETE' }); location.reload(); }); }
         function confirmDeleteHabit(id) { showConfirm("Delete Habit?", "All logs will be removed.", async () => { await fetch(`/api/habits/${id}`, { method: 'DELETE' }); location.reload(); }); }
-
-        // --- UI & TABS ---
         function toggleTheme() { if (document.documentElement.classList.contains('dark')) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); } else { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } }
         (function() { const savedTheme = localStorage.getItem('theme'); if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); } })();
         
@@ -349,41 +332,45 @@
                 if (t === tab) btn.className = "flex-1 py-1.5 px-2 rounded-md bg-white dark:bg-gray-600 shadow-sm text-xs font-medium text-gray-800 dark:text-white transition-all";
                 else btn.className = "flex-1 py-1.5 px-2 rounded-md text-xs font-medium text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-all";
             });
-            
             const listView = document.getElementById('view-list');
             const classView = document.getElementById('view-classes');
-
-            if (tab === 'classes') {
-                listView.classList.add('hidden');
-                classView.classList.remove('hidden');
-            } else {
-                listView.classList.remove('hidden');
-                classView.classList.add('hidden');
-                
-                const items = listView.querySelectorAll('.task-item');
-                items.forEach(item => {
-                    const timing = item.dataset.timing;
-                    if (tab === 'urgent') {
-                        if (timing !== 'urgent') item.classList.add('hidden'); else item.classList.remove('hidden');
-                    } else if (tab === 'week') {
-                        if (timing === 'urgent' || timing === 'this_week') item.classList.remove('hidden'); else item.classList.add('hidden');
-                    }
-                });
-            }
+            if (tab === 'classes') { listView.classList.add('hidden'); classView.classList.remove('hidden'); } else { listView.classList.remove('hidden'); classView.classList.add('hidden'); const items = listView.querySelectorAll('.task-item'); items.forEach(item => { const timing = item.dataset.timing; if (tab === 'urgent') { if (timing !== 'urgent') item.classList.add('hidden'); else item.classList.remove('hidden'); } else if (tab === 'week') { if (timing === 'urgent' || timing === 'this_week') item.classList.remove('hidden'); else item.classList.add('hidden'); } }); }
         }
         document.addEventListener('DOMContentLoaded', () => { switchTaskTab('week'); });
-
-        // --- ACTIONS ---
         async function toggleTask(id, checkbox) { fetch(`/api/toggle_task/${id}`, { method: 'POST' }); const card = document.getElementById(`task-card-${id}`); const title = document.getElementById(`task-title-${id}`); const isCompleted = checkbox.checked; if (isCompleted) { card.classList.add('opacity-60'); title.classList.add('line-through', 'text-gray-500', 'dark:text-gray-500'); title.classList.remove('text-gray-800', 'dark:text-gray-200'); card.classList.remove('border-l-red-500', 'border-l-orange-400', 'border-l-blue-300'); card.classList.add('border-l-gray-300', 'dark:border-l-gray-600'); } else { card.classList.remove('opacity-60'); title.classList.remove('line-through', 'text-gray-500', 'dark:text-gray-500'); title.classList.add('text-gray-800', 'dark:text-gray-200'); const timing = card.dataset.timing; card.classList.remove('border-l-gray-300', 'dark:border-l-gray-600'); if (timing === 'urgent') card.classList.add('border-l-red-500'); else if (timing === 'this_week') card.classList.add('border-l-orange-400'); else if (timing === 'next_week') card.classList.add('border-l-blue-300'); else card.classList.add('border-l-gray-300', 'dark:border-l-gray-600'); } }
         async function toggleHabit(habitId, dateStr) { const btn = document.getElementById(`btn-${habitId}-${dateStr}`); btn.style.transform = "scale(0.9)"; setTimeout(() => btn.style.transform = "scale(1)", 150); const response = await fetch('/api/toggle_habit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habit_id: habitId, date: dateStr }) }); const data = await response.json(); if (data.success) { btn.className = "w-7 h-7 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-all duration-200 shadow-sm"; btn.innerHTML = ""; if (data.status === 'done') { btn.classList.add('bg-green-500', 'text-white'); btn.innerHTML = '<i class="fas fa-check text-[10px]"></i>'; } else if (data.status === 'today') { btn.classList.add('border-2', 'border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20', 'text-blue-500'); btn.innerHTML = '<i class="fas fa-plus text-[10px]"></i>'; } else { btn.classList.add('border', 'border-gray-200', 'dark:border-gray-600', 'hover:bg-gray-200', 'dark:hover:bg-gray-600'); } const progElem = document.getElementById(`habit-progress-${habitId}`); if (progElem) { progElem.innerText = data.habit_progress + '%'; progElem.className = data.habit_progress === 100 ? "text-center font-bold text-sm text-green-500" : "text-center font-bold text-sm text-gray-700 dark:text-gray-300"; } document.getElementById('global-score').innerText = data.new_score + '%'; document.getElementById('global-verdict').innerText = data.new_verdict; } }
         
-        // Input Modals
+        // --- INPUT MODALS (FIXED DESCRIPTION SAVE & EDIT) ---
         function openTaskModal(id = null, title = '', category = '', timing = 'later') { document.getElementById('taskId').value = id || ''; document.getElementById('taskInputTitle').value = title; document.getElementById('taskInputCategory').value = category; document.getElementById('taskInputTiming').value = timing; document.getElementById('taskModalTitle').innerText = id ? 'Edit Task' : 'Add Task'; document.getElementById('taskModal').classList.remove('hidden'); }
         function closeTaskModal() { document.getElementById('taskModal').classList.add('hidden'); }
         async function saveTask() { const id = document.getElementById('taskId').value; const title = document.getElementById('taskInputTitle').value; const category = document.getElementById('taskInputCategory').value; const timing = document.getElementById('taskInputTiming').value; if (!title) return alert('Title is required'); const url = id ? `/api/tasks/${id}` : '/api/tasks'; const method = id ? 'PUT' : 'POST'; await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, category, timing }) }); location.reload(); }
-        function openHabitModal(id = null, name = '', desc = '') { document.getElementById('habitId').value = id || ''; document.getElementById('habitInputName').value = name; document.getElementById('habitInputDesc').value = desc; document.getElementById('habitModalTitle').innerText = id ? 'Edit Habit' : 'Add Habit'; document.getElementById('habitModal').classList.remove('hidden'); }
+        
+        function openHabitModal(id = null, name = '', desc = '') { 
+            document.getElementById('habitId').value = id || ''; 
+            document.getElementById('habitInputName').value = name; 
+            document.getElementById('habitInputDesc').value = desc; 
+            document.getElementById('habitModalTitle').innerText = id ? 'Edit Habit' : 'Add Habit'; 
+            document.getElementById('habitModal').classList.remove('hidden'); 
+        }
         function closeHabitModal() { document.getElementById('habitModal').classList.add('hidden'); }
-        async function saveHabit() { const id = document.getElementById('habitId').value; const name = document.getElementById('habitInputName').value; const desc = document.getElementById('habitInputDesc').value; if (!name) return alert('Name is required'); const url = id ? `/api/habits/${id}` : '/api/habits'; const method = id ? 'PUT' : 'POST'; await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, desc }) }); location.reload(); }
+        async function saveHabit() { 
+            const id = document.getElementById('habitId').value; 
+            const name = document.getElementById('habitInputName').value; 
+            const desc = document.getElementById('habitInputDesc').value; 
+            if (!name) return alert('Name is required'); 
+            
+            // Determine URL & Method
+            const url = id ? `/api/habits/${id}` : '/api/habits'; 
+            const method = id ? 'PUT' : 'POST'; 
+            
+            // FIX: Sending 'description' key to match backend expectations
+            await fetch(url, { 
+                method: method, 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ name, description: desc }) 
+            }); 
+            location.reload(); 
+        }
     </script>
 </body>
 </html>
